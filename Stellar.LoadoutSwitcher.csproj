@@ -12,8 +12,8 @@
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>
   <ItemGroup>
-    <!-- Requires the framework release that adds ILoadout + INotifications (>= 1.2.0). -->
-    <PackageReference Include="Stellar.Abstractions" Version="1.2.0" />
-    <PackageReference Include="Stellar.Plugin.InteropRefs" Version="1.2.0" />
+    <!-- Requires the framework release that adds INoticeTips (>= 1.3.0). -->
+    <PackageReference Include="Stellar.Abstractions" Version="1.3.0" />
+    <PackageReference Include="Stellar.Plugin.InteropRefs" Version="1.3.0" />
   </ItemGroup>
 </Project>
