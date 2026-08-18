@@ -1,0 +1,7 @@
+{
+  "loadout.hotkey.apply": "Apply Loadout {0}",
+  "loadout.toast.apiNotReady": "Loadout API not ready",
+  "loadout.toast.inProgress": "Switch already in progress",
+  "loadout.toast.noSlot": "No loadout in slot {0}",
+  "loadout.toast.switched": "Switched to {0}"
+}
