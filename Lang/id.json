@@ -1,7 +1,7 @@
 {
-  "loadout.hotkey.apply": "Apply Loadout {0}",
-  "loadout.toast.apiNotReady": "Loadout API not ready",
-  "loadout.toast.inProgress": "Switch already in progress",
-  "loadout.toast.noSlot": "No loadout in slot {0}",
-  "loadout.toast.switched": "Switched to {0}"
+  "loadout.hotkey.apply": "Terapkan Loadout {0}",
+  "loadout.toast.apiNotReady": "API Loadout belum siap",
+  "loadout.toast.inProgress": "Penggantian sedang berlangsung",
+  "loadout.toast.noSlot": "Tidak ada loadout di slot {0}",
+  "loadout.toast.switched": "Beralih ke {0}"
 }
