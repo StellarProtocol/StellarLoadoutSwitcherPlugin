@@ -1,0 +1,7 @@
+{
+  "loadout.hotkey.apply": "Ilapat ang Loadout {0}",
+  "loadout.toast.apiNotReady": "Hindi pa handa ang Loadout API",
+  "loadout.toast.inProgress": "Isinasagawa na ang paglipat",
+  "loadout.toast.noSlot": "Walang loadout sa slot {0}",
+  "loadout.toast.switched": "Inilipat sa {0}"
+}
