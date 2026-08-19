@@ -1,0 +1,7 @@
+{
+  "loadout.hotkey.apply": "ロードアウト{0}を適用",
+  "loadout.toast.apiNotReady": "ロードアウトAPIが準備できていません",
+  "loadout.toast.inProgress": "切り替えは既に進行中です",
+  "loadout.toast.noSlot": "スロット{0}にロードアウトがありません",
+  "loadout.toast.switched": "{0}に切り替えました"
+}

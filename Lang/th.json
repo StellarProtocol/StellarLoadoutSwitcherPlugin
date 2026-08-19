@@ -1,0 +1,7 @@
+{
+  "loadout.hotkey.apply": "ใช้โหลดเอาต์ {0}",
+  "loadout.toast.apiNotReady": "โหลดเอาต์ API ยังไม่พร้อม",
+  "loadout.toast.inProgress": "กำลังสลับอยู่แล้ว",
+  "loadout.toast.noSlot": "ไม่มีโหลดเอาต์ในช่อง {0}",
+  "loadout.toast.switched": "สลับไปยัง {0} แล้ว"
+}

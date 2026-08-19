@@ -31,6 +31,7 @@ public sealed partial class Plugin : IStellarPlugin
     public string Name => "LoadoutSwitcher";
 
     private readonly IPluginServices _services;
+    private readonly ILocalization _loc;
     private readonly IHotkeyAction[] _actions;
 
     // 0 = idle, 1 = a switch is in flight. Guards against firing a second switch
@@ -40,6 +41,7 @@ public sealed partial class Plugin : IStellarPlugin
     public Plugin(IPluginServices services)
     {
         _services = services;
+        _loc = services.Localization;
         _services.Log.Info("[LoadoutSwitcher] plugin constructed");
 
         _actions = new IHotkeyAction[SlotCount];
@@ -49,7 +51,7 @@ public sealed partial class Plugin : IStellarPlugin
             _actions[i] = _services.Hotkeys.DeclareAction(
                 new HotkeyAction(
                     Id:               $"loadout.apply.{n}",
-                    Description:       $"Apply Loadout {n}",
+                    Description:       _loc.TFormat("loadout.hotkey.apply", n),
                     SuggestedDefault:  null),
                 callback: () => OnApply(n));
         }
@@ -70,7 +72,7 @@ public sealed partial class Plugin : IStellarPlugin
         if (!_services.Loadout.IsAvailable)
         {
             DiagSkipped(slotNumber, "loadout API unavailable");
-            _services.NoticeTips.Create(NoticeTipType.RedBar).WithContent("Loadout API not ready").Show();
+            _services.NoticeTips.Create(NoticeTipType.RedBar).WithContent(_loc.T("loadout.toast.apiNotReady")).Show();
             return;
         }
 
@@ -78,7 +80,7 @@ public sealed partial class Plugin : IStellarPlugin
         if (slotNumber - 1 >= slots.Count)
         {
             _services.Log.Info($"[LoadoutSwitcher] No loadout in slot {slotNumber}");
-            _services.NoticeTips.Create(NoticeTipType.RedBar).WithContent($"No loadout in slot {slotNumber}").Show();
+            _services.NoticeTips.Create(NoticeTipType.RedBar).WithContent(_loc.TFormat("loadout.toast.noSlot", slotNumber)).Show();
             return;
         }
 
@@ -86,7 +88,7 @@ public sealed partial class Plugin : IStellarPlugin
         if (Interlocked.CompareExchange(ref _inFlight, 1, 0) != 0)
         {
             DiagSkipped(slotNumber, "a switch is already in flight");
-            _services.NoticeTips.Create(NoticeTipType.RedBar).WithContent("Switch already in progress").Show();
+            _services.NoticeTips.Create(NoticeTipType.RedBar).WithContent(_loc.T("loadout.toast.inProgress")).Show();
             return;
         }
 
@@ -129,6 +131,6 @@ public sealed partial class Plugin : IStellarPlugin
         _services.Log.Info($"[LoadoutSwitcher] {message}");
 
         if (result == LoadoutResult.Success)
-            _services.NoticeTips.Create(NoticeTipType.GreenBar).WithContent($"Switched to {slot.Name}").Show();
+            _services.NoticeTips.Create(NoticeTipType.GreenBar).WithContent(_loc.TFormat("loadout.toast.switched", slot.Name)).Show();
     }
 }
