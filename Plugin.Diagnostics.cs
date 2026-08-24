@@ -43,4 +43,12 @@ public sealed partial class Plugin
         if (!StellarDiagnostics.IsEnabled) return;
         _services.Log.Info($"[LoadoutSwitcher] DS apply for loadout {loadoutId} skipped: {reason}");
     }
+
+    /// <summary>Logged when <c>BindCurrent</c> aborts without storing a binding (e.g. the live
+    /// profession id hasn't resolved yet).</summary>
+    private void DiagBindAborted(int loadoutId, string reason)
+    {
+        if (!StellarDiagnostics.IsEnabled) return;
+        _services.Log.Info($"[LoadoutSwitcher] bind for loadout {loadoutId} aborted: {reason}");
+    }
 }

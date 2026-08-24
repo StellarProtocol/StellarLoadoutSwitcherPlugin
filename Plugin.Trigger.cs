@@ -11,8 +11,14 @@ namespace Stellar.LoadoutSwitcher;
 /// <see cref="ILoadout.CurrentIndex"/> change (covers both the hotkey path and any external
 /// switch), arms a pending apply, and fires it once the build has settled — signalled by
 /// <see cref="ILoadout.LiveStateChanged"/> or, failing that, a tick-count fallback — guarded so a
-/// binding captured under one class is never applied to another, and so it never overlaps a
-/// switch in flight (<see cref="_inFlight"/>, shared with the hotkey path in <c>Plugin.cs</c>).
+/// binding captured under one class is never applied to another. The DS apply is single-flighted
+/// on its OWN latch, <see cref="_applying"/> — NOT the hotkey path's <see cref="_inFlight"/>
+/// (<c>Plugin.cs</c>). The two guard different, independent operations (a Deep-Slumber apply vs. a
+/// loadout switch): the hotkey switch that arms a pending apply holds <see cref="_inFlight"/> for
+/// its whole in-flight <c>await</c>, so if the settle signal fires before that continuation
+/// releases it, sharing the guard would make the DS apply lose the race and drop silently. On an
+/// <see cref="_applying"/> collision (a DS apply is already running) the pending apply RE-ARMS
+/// instead of dropping.
 /// </summary>
 public sealed partial class Plugin
 {
@@ -54,7 +60,7 @@ public sealed partial class Plugin
 
     private void OnLiveStateChanged()
     {
-        if (_applying != 0) return;      // ignore the event our own apply provokes
+        if (Interlocked.CompareExchange(ref _applying, 0, 0) != 0) return;   // ignore the event our own apply provokes
         if (_pendingIndex is not null) TryApplyPending();
     }
 
@@ -75,16 +81,20 @@ public sealed partial class Plugin
 
         var liveProf = _services.Loadout.LiveState?.ProfessionId;
         var settled = liveProf == setup.ProfessionId;
-        if (!settled && _tick < _pendingDeadline) return;   // keep waiting until settle or deadline
-
-        _pendingIndex = null;
-        if (!settled)
+        if (!settled && _tick < _pendingDeadline) return;          // keep waiting (pending stays armed)
+        if (!settled)                                              // deadline hit with wrong/again class → drop + log
         {
+            _pendingIndex = null;
             DiagSkippedApply(idx.Value, $"class {liveProf} != binding class {setup.ProfessionId}");
-            return;                                          // stale binding — do not apply to wrong class
+            return;
         }
-        if (Interlocked.CompareExchange(ref _inFlight, 1, 0) != 0) return;
-        Interlocked.Exchange(ref _applying, 1);
+        // settled + class matches: try to take the DS-apply latch (NOT _inFlight)
+        if (Interlocked.CompareExchange(ref _applying, 1, 0) != 0)
+        {
+            _pendingDeadline = _tick + SettleTimeoutTicks;        // a DS apply is already running → retry next tick
+            return;                                               // keep _pendingIndex armed, do NOT drop
+        }
+        _pendingIndex = null;                                     // committed
         _ = ApplyDeepSlumberAsync(setup);
     }
 
@@ -98,8 +108,8 @@ public sealed partial class Plugin
         catch (Exception ex) { _services.Log.Warning($"[LoadoutSwitcher] DS apply threw: {ex.Message}"); }
         finally
         {
+            // Only our own latch — the DS apply never touches the hotkey path's _inFlight.
             Interlocked.Exchange(ref _applying, 0);
-            Interlocked.Exchange(ref _inFlight, 0);
         }
     }
 
