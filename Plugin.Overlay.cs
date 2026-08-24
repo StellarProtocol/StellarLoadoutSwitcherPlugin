@@ -67,39 +67,23 @@ public sealed partial class Plugin
             callback: () => _dsWindow.SetVisiblePersist(!_dsWindow.IsShown));
 
         // Launcher-rail tile so the window is discoverable (not hotkey-only) — the hotkey has no
-        // default binding, so without this the overlay is invisible to a new user.
-        RegisterLauncherTile();
-
-        _services.Loadout.LoadoutsChanged += OnDsLoadoutsChanged;
-        // The window's own strings are live Func<string> and re-localize automatically; the launcher
-        // ENTRY TITLE is a captured string, so re-register it whenever the language changes live.
-        _loc.LanguageChanged += OnDsLanguageChanged;
-    }
-
-    // (Re)register the launcher tile with the current-language title — called on init and on every live
-    // language change so the tile name is never stuck in a prior language (LauncherEntry.Title is a
-    // captured string, not a Func).
-    private void RegisterLauncherTile()
-    {
-        _dsLauncherEntry?.Dispose();
+        // default binding, so without this the overlay is invisible to a new user. TitleProvider makes
+        // the tile re-localize LIVE on a language change (Title alone is a captured string); Title stays
+        // the stable pinned-state identity.
         _dsLauncherEntry = _services.Launcher.Register(new LauncherEntry(
             _loc.T("loadout.dsbindings.title"), IconPng: LoadLauncherIcon(), IconKey: null,
             OnOpen: () => _dsWindow.SetVisiblePersist(!_dsWindow.IsShown))
         {
             ShouldShow = () => _services.ClientState.Phase == GamePhase.World,
+            TitleProvider = () => _loc.T("loadout.dsbindings.title"),
         });
-    }
 
-    private void OnDsLanguageChanged()
-    {
-        RegisterLauncherTile();
-        _dsWindow?.MarkDirty();
+        _services.Loadout.LoadoutsChanged += OnDsLoadoutsChanged;
     }
 
     private void DisposeOverlay()
     {
         _services.Loadout.LoadoutsChanged -= OnDsLoadoutsChanged;
-        _loc.LanguageChanged -= OnDsLanguageChanged;
         try { _dsLauncherEntry?.Dispose(); } catch { /* disposal must not throw */ }
         try { _dsToggle?.Dispose(); } catch { /* disposal must not throw */ }
         try { _dsWindow?.Remove(); } catch { /* disposal must not throw */ }
