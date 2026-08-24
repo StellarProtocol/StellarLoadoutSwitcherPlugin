@@ -26,6 +26,7 @@ public sealed partial class Plugin
 
     private IWindowControl _dsWindow = null!;
     private IHotkeyAction _dsToggle = null!;
+    private IDisposable _dsLauncherEntry = null!;
     private IReadOnlyList<LoadoutSlot> _dsSlots = Array.Empty<LoadoutSlot>();
     // loadoutId -> status text; PRESENCE means "bound" (drives the accent colour + Clear-enabled).
     private readonly Dictionary<int, string> _dsBoundStatus = new();
@@ -61,12 +62,22 @@ public sealed partial class Plugin
                 SuggestedDefault: null),
             callback: () => _dsWindow.SetVisiblePersist(!_dsWindow.IsShown));
 
+        // Launcher-rail tile so the window is discoverable (not hotkey-only) — the hotkey has no
+        // default binding, so without this the overlay is invisible to a new user.
+        _dsLauncherEntry = _services.Launcher.Register(new LauncherEntry(
+            _loc.T("loadout.dsbindings.title"), IconPng: null, IconKey: null,
+            OnOpen: () => _dsWindow.SetVisiblePersist(!_dsWindow.IsShown))
+        {
+            ShouldShow = () => _services.ClientState.Phase == GamePhase.World,
+        });
+
         _services.Loadout.LoadoutsChanged += OnDsLoadoutsChanged;
     }
 
     private void DisposeOverlay()
     {
         _services.Loadout.LoadoutsChanged -= OnDsLoadoutsChanged;
+        try { _dsLauncherEntry?.Dispose(); } catch { /* disposal must not throw */ }
         try { _dsToggle?.Dispose(); } catch { /* disposal must not throw */ }
         try { _dsWindow?.Remove(); } catch { /* disposal must not throw */ }
     }

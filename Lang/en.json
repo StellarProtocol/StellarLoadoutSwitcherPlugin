@@ -1,6 +1,6 @@
 {
   "loadout.hotkey.apply": "Apply Loadout {0}",
-  "loadout.hotkey.windowToggle": "Open Deep-Slumber bindings",
+  "loadout.hotkey.windowToggle": "Open Loadout Switcher",
   "loadout.toast.apiNotReady": "Loadout API not ready",
   "loadout.toast.inProgress": "Switch already in progress",
   "loadout.toast.noSlot": "No loadout in slot {0}",
@@ -9,7 +9,7 @@
   "ds.toast.partial": "Deep-Slumber partly applied",
   "ds.toast.refused": "Deep-Slumber change refused",
   "ds.toast.unavailable": "Deep-Slumber not available yet",
-  "loadout.dsbindings.title": "Deep-Slumber Bindings",
+  "loadout.dsbindings.title": "Loadout Switcher",
   "loadout.dsbindings.autoApply": "Auto-apply on switch",
   "loadout.dsbindings.colName": "Loadout",
   "loadout.dsbindings.colStatus": "Binding",

@@ -64,12 +64,24 @@ public sealed partial class Plugin
             return false;
         }
 
+        // Scope to the CURRENT season only — the live container carries EVERY season the character
+        // ever touched (last season's fully-built psychoscope bleeds in otherwise: owner bound an
+        // empty Tank and got "4 areas (19 factors)" from the prior Dreambloom season). The current
+        // season is the newest line id present (old seasons persist but never exceed it); this mirrors
+        // the logs site's current-season scoping (services/stellar-logs/site/src/lib/deepslumber.ts,
+        // owner design 2026-08-23). Within it, only the ENABLED area per sub-type (1-of-N), and only
+        // REAL socketed factors (itemId != 0 — an unlocked-but-empty middle socket is not a factor).
+        var currentLine = state.Lines.Count == 0 ? int.MinValue : state.Lines.Max(l => l.LineId);
         var areas = state.Lines
+            .Where(l => l.LineId == currentLine)
             .SelectMany(l => l.Areas)
             .Where(a => a.IsActive)
             .Select(a => new DeepSlumberAreaBinding(
                 a.AreaId,
-                a.MiddleNodes.Select(m => new[] { m[0], m[1] }).OrderBy(f => f[0]).ToList()))
+                a.MiddleNodes
+                    .Where(m => m.Length >= 2 && m[1] != 0)
+                    .Select(m => new[] { m[0], m[1] })
+                    .OrderBy(f => f[0]).ToList()))
             .ToList();
 
         var setup = new DeepSlumberSetup(prof, areas);
