@@ -28,8 +28,12 @@ public sealed partial class Plugin
     private IHotkeyAction _dsToggle = null!;
     private IDisposable _dsLauncherEntry = null!;
     private IReadOnlyList<LoadoutSlot> _dsSlots = Array.Empty<LoadoutSlot>();
-    // loadoutId -> status text; PRESENCE means "bound" (drives the accent colour + Clear-enabled).
-    private readonly Dictionary<int, string> _dsBoundStatus = new();
+    // loadoutId -> bound-setup NUMBERS (area count, the single area's id for the 1-area label, factor
+    // count); PRESENCE means "bound" (drives the accent colour + Clear-enabled). Cache the NUMBERS, not
+    // a localized string, so the status re-localizes LIVE when the language changes — DsStatusText
+    // formats it each frame. A cached string would stay in whatever language was active when the loadout
+    // last changed (owner smoke 2026-08-25: switching Thai→English left bound rows reading Thai).
+    private readonly Dictionary<int, (int areaCount, int firstAreaId, int factors)> _dsBoundStatus = new();
 
     private void InitOverlay()
     {
@@ -64,19 +68,38 @@ public sealed partial class Plugin
 
         // Launcher-rail tile so the window is discoverable (not hotkey-only) — the hotkey has no
         // default binding, so without this the overlay is invisible to a new user.
+        RegisterLauncherTile();
+
+        _services.Loadout.LoadoutsChanged += OnDsLoadoutsChanged;
+        // The window's own strings are live Func<string> and re-localize automatically; the launcher
+        // ENTRY TITLE is a captured string, so re-register it whenever the language changes live.
+        _loc.LanguageChanged += OnDsLanguageChanged;
+    }
+
+    // (Re)register the launcher tile with the current-language title — called on init and on every live
+    // language change so the tile name is never stuck in a prior language (LauncherEntry.Title is a
+    // captured string, not a Func).
+    private void RegisterLauncherTile()
+    {
+        _dsLauncherEntry?.Dispose();
         _dsLauncherEntry = _services.Launcher.Register(new LauncherEntry(
             _loc.T("loadout.dsbindings.title"), IconPng: LoadLauncherIcon(), IconKey: null,
             OnOpen: () => _dsWindow.SetVisiblePersist(!_dsWindow.IsShown))
         {
             ShouldShow = () => _services.ClientState.Phase == GamePhase.World,
         });
+    }
 
-        _services.Loadout.LoadoutsChanged += OnDsLoadoutsChanged;
+    private void OnDsLanguageChanged()
+    {
+        RegisterLauncherTile();
+        _dsWindow?.MarkDirty();
     }
 
     private void DisposeOverlay()
     {
         _services.Loadout.LoadoutsChanged -= OnDsLoadoutsChanged;
+        _loc.LanguageChanged -= OnDsLanguageChanged;
         try { _dsLauncherEntry?.Dispose(); } catch { /* disposal must not throw */ }
         try { _dsToggle?.Dispose(); } catch { /* disposal must not throw */ }
         try { _dsWindow?.Remove(); } catch { /* disposal must not throw */ }
@@ -110,9 +133,10 @@ public sealed partial class Plugin
             var setup = GetBinding(slot.Index);
             if (setup is null) continue;
             var factors = setup.Areas.Sum(a => a.Factors.Count);
-            _dsBoundStatus[slot.Index] = setup.Areas.Count == 1
-                ? _loc.TFormat("loadout.dsbindings.boundOneArea", setup.Areas[0].AreaId, factors)
-                : _loc.TFormat("loadout.dsbindings.boundManyAreas", setup.Areas.Count, factors);
+            _dsBoundStatus[slot.Index] = (
+                setup.Areas.Count,
+                setup.Areas.Count == 1 ? setup.Areas[0].AreaId : 0,
+                factors);
         }
         _dsWindow?.MarkDirty();
     }
@@ -124,7 +148,11 @@ public sealed partial class Plugin
     private string DsStatusText(int i)
     {
         if (DsRowAt(i) is not { } slot) return "";
-        return _dsBoundStatus.TryGetValue(slot.Index, out var text) ? text : _loc.T("loadout.dsbindings.noBinding");
+        if (!_dsBoundStatus.TryGetValue(slot.Index, out var d)) return _loc.T("loadout.dsbindings.noBinding");
+        // Format LIVE (not from a cached string) so a language switch re-localizes it immediately.
+        return d.areaCount == 1
+            ? _loc.TFormat("loadout.dsbindings.boundOneArea", d.firstAreaId, d.factors)
+            : _loc.TFormat("loadout.dsbindings.boundManyAreas", d.areaCount, d.factors);
     }
 
     private void OnDsBindCurrent(LoadoutSlot? slot)
