@@ -29,4 +29,18 @@ public sealed partial class Plugin
         if (!StellarDiagnostics.IsEnabled) return;
         _services.Log.Info($"[LoadoutSwitcher] bound loadout {loadoutId}: profession={setup.ProfessionId} areas={setup.Areas.Count}");
     }
+
+    /// <summary>Logged when the transition trigger arms a pending Deep-Slumber apply for a loadout id.</summary>
+    private void DiagArmed(int loadoutId)
+    {
+        if (!StellarDiagnostics.IsEnabled) return;
+        _services.Log.Info($"[LoadoutSwitcher] armed pending DS apply for loadout {loadoutId}");
+    }
+
+    /// <summary>Logged when a pending Deep-Slumber apply is skipped (e.g. class guard failed).</summary>
+    private void DiagSkippedApply(int loadoutId, string reason)
+    {
+        if (!StellarDiagnostics.IsEnabled) return;
+        _services.Log.Info($"[LoadoutSwitcher] DS apply for loadout {loadoutId} skipped: {reason}");
+    }
 }

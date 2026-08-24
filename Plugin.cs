@@ -57,10 +57,14 @@ public sealed partial class Plugin : IStellarPlugin
                     SuggestedDefault:  null),
                 callback: () => OnApply(n));
         }
+
+        InitTrigger();
     }
 
     public void Dispose()
     {
+        DisposeTrigger();
+
         foreach (var action in _actions)
         {
             try { action.Dispose(); }
