@@ -25,5 +25,6 @@
     <EmbeddedResource Include="Lang/th.json" LogicalName="Stellar.LoadoutSwitcher.Lang.th.json" />
     <EmbeddedResource Include="Lang/id.json" LogicalName="Stellar.LoadoutSwitcher.Lang.id.json" />
     <EmbeddedResource Include="Lang/fil.json" LogicalName="Stellar.LoadoutSwitcher.Lang.fil.json" />
+    <EmbeddedResource Include="Resources/loadoutswitcher-icon.png" LogicalName="Stellar.LoadoutSwitcher.loadoutswitcher-icon.png" />
   </ItemGroup>
 </Project>

@@ -65,7 +65,7 @@ public sealed partial class Plugin
         // Launcher-rail tile so the window is discoverable (not hotkey-only) — the hotkey has no
         // default binding, so without this the overlay is invisible to a new user.
         _dsLauncherEntry = _services.Launcher.Register(new LauncherEntry(
-            _loc.T("loadout.dsbindings.title"), IconPng: null, IconKey: null,
+            _loc.T("loadout.dsbindings.title"), IconPng: LoadLauncherIcon(), IconKey: null,
             OnOpen: () => _dsWindow.SetVisiblePersist(!_dsWindow.IsShown))
         {
             ShouldShow = () => _services.ClientState.Phase == GamePhase.World,
@@ -83,6 +83,21 @@ public sealed partial class Plugin
     }
 
     private void OnDsLoadoutsChanged() => RefreshDsRows();
+
+    // The launcher-rail tile icon (embedded swap-arrows PNG). Null → the launcher's default glyph.
+    private static byte[]? LoadLauncherIcon()
+    {
+        try
+        {
+            using var s = typeof(Plugin).Assembly
+                .GetManifestResourceStream("Stellar.LoadoutSwitcher.loadoutswitcher-icon.png");
+            if (s is null) return null;
+            using var ms = new System.IO.MemoryStream();
+            s.CopyTo(ms);
+            return ms.ToArray();
+        }
+        catch { return null; }
+    }
 
     // Re-read the loadout list + rebuild the per-loadout status cache (a JSON deserialize per bound
     // loadout — done here on change, NOT per poll tick), then repaint.
