@@ -59,10 +59,12 @@ public sealed partial class Plugin : IStellarPlugin
         }
 
         InitTrigger();
+        InitOverlay();
     }
 
     public void Dispose()
     {
+        DisposeOverlay();
         DisposeTrigger();
 
         foreach (var action in _actions)
