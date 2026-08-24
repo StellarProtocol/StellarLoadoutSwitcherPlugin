@@ -20,5 +20,6 @@
   "loadout.dsbindings.clear": "Clear",
   "loadout.dsbindings.empty": "No saved loadouts yet.",
   "loadout.dsbindings.bound": "Bound Deep-Slumber to {0}",
-  "loadout.dsbindings.bindFailed": "Couldn't capture — try again in a moment"
+  "loadout.dsbindings.bindFailed": "Couldn't capture — try again in a moment",
+  "loadout.dsbindings.help": "Bind a Deep-Slumber setup — its cultivate line and phantom factors — to each loadout. With Auto-apply on, the plugin re-applies that setup whenever you switch to the loadout. \"Bind current\" saves the Deep-Slumber you're using right now onto your active loadout."
 }

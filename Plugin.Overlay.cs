@@ -189,6 +189,13 @@ public sealed partial class Plugin
             new CellElement(new SpacerElement(), Width: 60f),
         }, Gap: 6f);
 
+        // Muted intro paragraph (wraps to the window width — Width 0 + default NoWrap=false) explaining
+        // what a binding is, what Auto-apply does, and what "Bind current" captures. Deep-Slumber is
+        // named explicitly so the window is self-describing.
+        var helpText = new TextElement(
+            () => _loc.T("loadout.dsbindings.help"),
+            () => (ColorRgba?)_services.Theme.Colors.MenuMuted);
+
         var toggleRow = new RowElement(new HudElement[]
         {
             new ToggleElement(() => "", () => AutoApply, v => AutoApply = v),
@@ -206,6 +213,9 @@ public sealed partial class Plugin
             Else: new TextElement(() => _loc.T("loadout.dsbindings.empty"),
                 () => (ColorRgba?)_services.Theme.Colors.MenuMuted));
 
-        return new ColumnElement(new HudElement[] { toggleRow, new SeparatorElement(), listOrEmpty }, Gap: 8f);
+        return new ColumnElement(new HudElement[]
+        {
+            helpText, new SeparatorElement(), toggleRow, new SeparatorElement(), listOrEmpty,
+        }, Gap: 8f);
     }
 }
