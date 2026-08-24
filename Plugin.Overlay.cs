@@ -38,11 +38,16 @@ public sealed partial class Plugin
             new WindowSpec(
                 Id:          "loadoutswitcher.dsbindings",
                 Title:       _loc.T("loadout.dsbindings.title"),
-                DefaultRect: new WindowRect(760f, 120f, 380f, 0f),   // 0 height = content-sized
+                // Width 500 = the 448px column budget (130+140+100+60 + 3×6 gaps) + GlassMenu body
+                // padding (24) + scrollbar inset (9), with margin — a narrower window clips the Clear
+                // column past the ScrollElement RectMask2D (ux-ui review, computed from WindowBuilder
+                // constants). X/Y = offset from the top-right anchor; 0 height = content-sized.
+                DefaultRect: new WindowRect(20f, 120f, 500f, 0f),
                 Category:    WindowCategory.Tools,
                 Style:       WindowPanelStyle.GlassMenu)
             {
                 StartVisible = false, Closable = true, Draggable = true,
+                Anchor = WindowAnchor.TopRight,
                 ShouldRender = () => _services.ClientState.Phase == GamePhase.World
                                      && (_services.ClientState.UiState & GameUIState.Loading) == 0,
             },
@@ -164,12 +169,17 @@ public sealed partial class Plugin
             new TextElement(() => _loc.T("loadout.dsbindings.autoApply")),
         }, Gap: 6f);
 
+        // Empty state swaps BOTH the header and the list for a single muted sentence (per design).
         var listOrEmpty = new ConditionalElement(
             () => _dsSlots.Count > 0,
-            Then: new ScrollElement(new ListElement(() => _dsSlots.Count, pool, Columns: 1), Height: 260f),
+            Then: new ColumnElement(new HudElement[]
+            {
+                header,
+                new ScrollElement(new ListElement(() => _dsSlots.Count, pool, Columns: 1), Height: 260f),
+            }, Gap: 8f),
             Else: new TextElement(() => _loc.T("loadout.dsbindings.empty"),
                 () => (ColorRgba?)_services.Theme.Colors.MenuMuted));
 
-        return new ColumnElement(new HudElement[] { toggleRow, new SeparatorElement(), header, listOrEmpty }, Gap: 8f);
+        return new ColumnElement(new HudElement[] { toggleRow, new SeparatorElement(), listOrEmpty }, Gap: 8f);
     }
 }
