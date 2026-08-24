@@ -1,12 +1,13 @@
 using Stellar.Abstractions.Diagnostics;
+using Stellar.Abstractions.Domain.DeepSlumber;
 using Stellar.Abstractions.Domain.Loadout;
 
 namespace Stellar.LoadoutSwitcher;
 
 /// <summary>
-/// Diagnostic sibling partial for <see cref="Plugin"/>. Per-event hotkey trace lines are
-/// gated on <see cref="StellarDiagnostics.IsEnabled"/> so normal play stays quiet; the
-/// user-facing switch outcomes (in <c>Plugin.cs</c>) always log.
+/// Diagnostic sibling partial for <see cref="Plugin"/>. Per-event hotkey/binding/trigger trace
+/// lines are gated on <see cref="StellarDiagnostics.IsEnabled"/> so normal play stays quiet; the
+/// user-facing switch outcomes (in <c>Plugin.cs</c> / <c>Plugin.Trigger.cs</c>) always log.
 /// </summary>
 public sealed partial class Plugin
 {
@@ -20,5 +21,34 @@ public sealed partial class Plugin
     {
         if (!StellarDiagnostics.IsEnabled) return;
         _services.Log.Info($"[LoadoutSwitcher] hotkey {slotNumber} skipped: {reason}");
+    }
+
+    /// <summary>Logged after a Deep-Slumber setup is captured and stored for a loadout id.</summary>
+    private void DiagBound(int loadoutId, DeepSlumberSetup setup)
+    {
+        if (!StellarDiagnostics.IsEnabled) return;
+        _services.Log.Info($"[LoadoutSwitcher] bound loadout {loadoutId}: profession={setup.ProfessionId} areas={setup.Areas.Count}");
+    }
+
+    /// <summary>Logged when the transition trigger arms a pending Deep-Slumber apply for a loadout id.</summary>
+    private void DiagArmed(int loadoutId)
+    {
+        if (!StellarDiagnostics.IsEnabled) return;
+        _services.Log.Info($"[LoadoutSwitcher] armed pending DS apply for loadout {loadoutId}");
+    }
+
+    /// <summary>Logged when a pending Deep-Slumber apply is skipped (e.g. class guard failed).</summary>
+    private void DiagSkippedApply(int loadoutId, string reason)
+    {
+        if (!StellarDiagnostics.IsEnabled) return;
+        _services.Log.Info($"[LoadoutSwitcher] DS apply for loadout {loadoutId} skipped: {reason}");
+    }
+
+    /// <summary>Logged when <c>BindCurrent</c> aborts without storing a binding (e.g. the live
+    /// profession id hasn't resolved yet).</summary>
+    private void DiagBindAborted(int loadoutId, string reason)
+    {
+        if (!StellarDiagnostics.IsEnabled) return;
+        _services.Log.Info($"[LoadoutSwitcher] bind for loadout {loadoutId} aborted: {reason}");
     }
 }

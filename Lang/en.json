@@ -1,7 +1,25 @@
 {
   "loadout.hotkey.apply": "Apply Loadout {0}",
+  "loadout.hotkey.windowToggle": "Open Loadout Switcher",
   "loadout.toast.apiNotReady": "Loadout API not ready",
   "loadout.toast.inProgress": "Switch already in progress",
   "loadout.toast.noSlot": "No loadout in slot {0}",
-  "loadout.toast.switched": "Switched to {0}"
+  "loadout.toast.switched": "Switched to {0}",
+  "ds.toast.applied": "Applied Deep-Slumber setup",
+  "ds.toast.partial": "Deep-Slumber partly applied",
+  "ds.toast.refused": "Deep-Slumber change refused",
+  "ds.toast.unavailable": "Deep-Slumber not available yet",
+  "loadout.dsbindings.title": "Loadout Switcher",
+  "loadout.dsbindings.autoApply": "Auto-apply on switch",
+  "loadout.dsbindings.colName": "Loadout",
+  "loadout.dsbindings.colStatus": "Binding",
+  "loadout.dsbindings.noBinding": "no binding",
+  "loadout.dsbindings.boundOneArea": "area {0} ({1} factors)",
+  "loadout.dsbindings.boundManyAreas": "{0} areas ({1} factors)",
+  "loadout.dsbindings.bindCurrent": "Bind current",
+  "loadout.dsbindings.clear": "Clear",
+  "loadout.dsbindings.empty": "No saved loadouts yet.",
+  "loadout.dsbindings.bound": "Bound Deep-Slumber to {0}",
+  "loadout.dsbindings.bindFailed": "Couldn't capture — try again in a moment",
+  "loadout.dsbindings.help": "Bind a Deep-Slumber setup — its cultivate line and phantom factors — to each loadout. With Auto-apply on, the plugin re-applies that setup whenever you switch to the loadout. \"Bind current\" saves the Deep-Slumber you're using right now onto your active loadout."
 }

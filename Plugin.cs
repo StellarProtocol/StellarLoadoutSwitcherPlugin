@@ -44,6 +44,8 @@ public sealed partial class Plugin : IStellarPlugin
         _loc = services.Localization;
         _services.Log.Info("[LoadoutSwitcher] plugin constructed");
 
+        InitBindings();
+
         _actions = new IHotkeyAction[SlotCount];
         for (var i = 0; i < SlotCount; i++)
         {
@@ -55,10 +57,16 @@ public sealed partial class Plugin : IStellarPlugin
                     SuggestedDefault:  null),
                 callback: () => OnApply(n));
         }
+
+        InitTrigger();
+        InitOverlay();
     }
 
     public void Dispose()
     {
+        DisposeOverlay();
+        DisposeTrigger();
+
         foreach (var action in _actions)
         {
             try { action.Dispose(); }
