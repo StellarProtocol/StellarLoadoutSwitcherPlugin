@@ -1,7 +1,25 @@
 {
   "loadout.hotkey.apply": "Terapkan Loadout {0}",
+  "loadout.hotkey.windowToggle": "Buka Loadout Switcher",
   "loadout.toast.apiNotReady": "API Loadout belum siap",
   "loadout.toast.inProgress": "Penggantian sedang berlangsung",
   "loadout.toast.noSlot": "Tidak ada loadout di slot {0}",
-  "loadout.toast.switched": "Beralih ke {0}"
+  "loadout.toast.switched": "Beralih ke {0}",
+  "ds.toast.applied": "Setup Deep-Slumber diterapkan",
+  "ds.toast.partial": "Deep-Slumber diterapkan sebagian",
+  "ds.toast.refused": "Perubahan Deep-Slumber ditolak",
+  "ds.toast.unavailable": "Deep-Slumber belum tersedia",
+  "loadout.dsbindings.title": "Loadout Switcher",
+  "loadout.dsbindings.autoApply": "Terapkan otomatis saat beralih",
+  "loadout.dsbindings.colName": "Loadout",
+  "loadout.dsbindings.colStatus": "Ikatan",
+  "loadout.dsbindings.noBinding": "tanpa ikatan",
+  "loadout.dsbindings.boundOneArea": "area {0} ({1} faktor)",
+  "loadout.dsbindings.boundManyAreas": "{0} area ({1} faktor)",
+  "loadout.dsbindings.bindCurrent": "Ikat yang sekarang",
+  "loadout.dsbindings.clear": "Hapus",
+  "loadout.dsbindings.empty": "Belum ada loadout tersimpan.",
+  "loadout.dsbindings.bound": "Deep-Slumber diikat ke {0}",
+  "loadout.dsbindings.bindFailed": "Gagal menangkap — coba lagi sebentar",
+  "loadout.dsbindings.help": "Ikat setup Deep-Slumber — jalur kultivasi dan faktornya — ke setiap loadout. Dengan Terapkan otomatis aktif, plugin menerapkan ulang setup itu setiap kali kamu beralih ke loadout tersebut. \"Ikat yang sekarang\" menyimpan Deep-Slumber yang sedang kamu pakai ke loadout aktif."
 }

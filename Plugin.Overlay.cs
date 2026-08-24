@@ -144,7 +144,9 @@ public sealed partial class Plugin
         RefreshDsRows();
     }
 
-    private HudElement BuildDsRoot()
+    // The fixed per-row element pool (one row per loadout slot, capped at DsRowPoolSize). Rows are
+    // built ONCE and read live via DsRowAt(idx); LoadoutsChanged only updates state + MarkDirty.
+    private HudElement[] BuildDsRowPool()
     {
         var pool = new HudElement[DsRowPoolSize];
         for (var i = 0; i < DsRowPoolSize; i++)
@@ -178,6 +180,12 @@ public sealed partial class Plugin
             var row = new RowElement(new HudElement[] { nameCell, statusCell, bindCell, clearCell }, Gap: 6f);
             pool[idx] = new SelectableElement(row, OnClick: () => { }, Selected: () => DsRowAt(idx)?.IsCurrent == true);
         }
+        return pool;
+    }
+
+    private HudElement BuildDsRoot()
+    {
+        var pool = BuildDsRowPool();
 
         var header = new RowElement(new HudElement[]
         {

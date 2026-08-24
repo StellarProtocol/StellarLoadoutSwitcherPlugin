@@ -1,7 +1,25 @@
 {
   "loadout.hotkey.apply": "ใช้โหลดเอาต์ {0}",
+  "loadout.hotkey.windowToggle": "เปิด Loadout Switcher",
   "loadout.toast.apiNotReady": "โหลดเอาต์ API ยังไม่พร้อม",
   "loadout.toast.inProgress": "กำลังสลับอยู่แล้ว",
   "loadout.toast.noSlot": "ไม่มีโหลดเอาต์ในช่อง {0}",
-  "loadout.toast.switched": "สลับไปยัง {0} แล้ว"
+  "loadout.toast.switched": "สลับไปยัง {0} แล้ว",
+  "ds.toast.applied": "ใช้ชุด Deep-Slumber แล้ว",
+  "ds.toast.partial": "ใช้ Deep-Slumber ได้เพียงบางส่วน",
+  "ds.toast.refused": "การเปลี่ยน Deep-Slumber ถูกปฏิเสธ",
+  "ds.toast.unavailable": "Deep-Slumber ยังไม่พร้อมใช้งาน",
+  "loadout.dsbindings.title": "Loadout Switcher",
+  "loadout.dsbindings.autoApply": "ใช้อัตโนมัติเมื่อสลับ",
+  "loadout.dsbindings.colName": "โหลดเอาต์",
+  "loadout.dsbindings.colStatus": "การผูก",
+  "loadout.dsbindings.noBinding": "ไม่มีการผูก",
+  "loadout.dsbindings.boundOneArea": "พื้นที่ {0} ({1} ปัจจัย)",
+  "loadout.dsbindings.boundManyAreas": "{0} พื้นที่ ({1} ปัจจัย)",
+  "loadout.dsbindings.bindCurrent": "ผูกชุดปัจจุบัน",
+  "loadout.dsbindings.clear": "ล้าง",
+  "loadout.dsbindings.empty": "ยังไม่มีโหลดเอาต์ที่บันทึกไว้",
+  "loadout.dsbindings.bound": "ผูก Deep-Slumber กับ {0} แล้ว",
+  "loadout.dsbindings.bindFailed": "บันทึกไม่สำเร็จ — โปรดลองอีกครั้งในอีกสักครู่",
+  "loadout.dsbindings.help": "ผูกชุด Deep-Slumber (สายบ่มเพาะและปัจจัยของมัน) เข้ากับแต่ละโหลดเอาต์ เมื่อเปิด \"ใช้อัตโนมัติ\" ปลั๊กอินจะใช้ชุดนั้นซ้ำทุกครั้งที่คุณสลับไปยังโหลดเอาต์นั้น \"ผูกชุดปัจจุบัน\" จะบันทึก Deep-Slumber ที่คุณใช้อยู่ตอนนี้ไว้กับโหลดเอาต์ที่ใช้งานอยู่"
 }

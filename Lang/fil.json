@@ -1,7 +1,25 @@
 {
   "loadout.hotkey.apply": "Ilapat ang Loadout {0}",
+  "loadout.hotkey.windowToggle": "Buksan ang Loadout Switcher",
   "loadout.toast.apiNotReady": "Hindi pa handa ang Loadout API",
   "loadout.toast.inProgress": "Isinasagawa na ang paglipat",
   "loadout.toast.noSlot": "Walang loadout sa slot {0}",
-  "loadout.toast.switched": "Inilipat sa {0}"
+  "loadout.toast.switched": "Inilipat sa {0}",
+  "ds.toast.applied": "Na-apply ang Deep-Slumber setup",
+  "ds.toast.partial": "Bahagyang na-apply ang Deep-Slumber",
+  "ds.toast.refused": "Tinanggihan ang pagbabago ng Deep-Slumber",
+  "ds.toast.unavailable": "Hindi pa available ang Deep-Slumber",
+  "loadout.dsbindings.title": "Loadout Switcher",
+  "loadout.dsbindings.autoApply": "Auto-apply kapag naglipat",
+  "loadout.dsbindings.colName": "Loadout",
+  "loadout.dsbindings.colStatus": "Binding",
+  "loadout.dsbindings.noBinding": "walang binding",
+  "loadout.dsbindings.boundOneArea": "area {0} ({1} factors)",
+  "loadout.dsbindings.boundManyAreas": "{0} areas ({1} factors)",
+  "loadout.dsbindings.bindCurrent": "I-bind ang kasalukuyan",
+  "loadout.dsbindings.clear": "I-clear",
+  "loadout.dsbindings.empty": "Wala pang naka-save na loadout.",
+  "loadout.dsbindings.bound": "Na-bind ang Deep-Slumber sa {0}",
+  "loadout.dsbindings.bindFailed": "Hindi ma-capture — subukan ulit mamaya",
+  "loadout.dsbindings.help": "I-bind ang isang Deep-Slumber setup — ang cultivate line at phantom factors nito — sa bawat loadout. Kapag naka-on ang Auto-apply, ire-re-apply ng plugin ang setup na iyon tuwing lilipat ka sa loadout na iyon. Ang \"Bind current\" ay nagse-save ng Deep-Slumber na ginagamit mo ngayon sa iyong active na loadout."
 }
