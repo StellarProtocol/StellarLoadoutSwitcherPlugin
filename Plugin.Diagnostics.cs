@@ -1,3 +1,4 @@
+using System.Linq;
 using Stellar.Abstractions.Diagnostics;
 using Stellar.Abstractions.Domain.DeepSlumber;
 using Stellar.Abstractions.Domain.Loadout;
@@ -27,7 +28,10 @@ public sealed partial class Plugin
     private void DiagBound(int loadoutId, DeepSlumberSetup setup)
     {
         if (!StellarDiagnostics.IsEnabled) return;
-        _services.Log.Info($"[LoadoutSwitcher] bound loadout {loadoutId}: profession={setup.ProfessionId} areas={setup.Areas.Count}");
+        var factors = setup.Areas.Sum(a => a.Factors.Count);
+        var anchors = setup.Areas.Sum(a => a.NormalNodes?.Count ?? 0);
+        _services.Log.Info($"[LoadoutSwitcher] bound loadout {loadoutId}: profession={setup.ProfessionId} " +
+                           $"areas={setup.Areas.Count} factors={factors} anchors={anchors}");
     }
 
     /// <summary>Logged when the transition trigger arms a pending Deep-Slumber apply for a loadout id.</summary>

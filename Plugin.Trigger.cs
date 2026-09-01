@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Stellar.Abstractions.Domain.DeepSlumber;
@@ -103,7 +104,7 @@ public sealed partial class Plugin
         try
         {
             var result = await _services.DeepSlumber.ApplySetupAsync(setup).ConfigureAwait(false);
-            ReportDeepSlumber(result);
+            ReportDeepSlumber(setup, result);
         }
         catch (Exception ex) { _services.Log.Warning($"[LoadoutSwitcher] DS apply threw: {ex.Message}"); }
         finally
@@ -113,12 +114,19 @@ public sealed partial class Plugin
         }
     }
 
-    private void ReportDeepSlumber(DeepSlumberApplyResult result)
+    private void ReportDeepSlumber(DeepSlumberSetup setup, DeepSlumberApplyResult result)
     {
         // AlreadyMatched/Cancelled: silent. Success: green. Partial/Refused/Unavailable: red (the
         // game also toasts the specific per-op reason itself). Loc keys land with the Task 8 overlay;
         // ILocalization.T falls back to the key literal until then.
-        _services.Log.Info($"[LoadoutSwitcher] DS apply -> {result}");
+        // Always-on shape probe: `anchors=legacy` means the applied binding predates tree capture (no
+        // tree → factor-only, no reset) — the owner must re-Bind to capture the tree. `anchors=N` means
+        // a tree is bound. This shows WHY an apply did/didn't reset without needing STELLAR_DIAGNOSTICS.
+        var factors = setup.Areas.Sum(a => a.Factors.Count);
+        var anchors = setup.Areas.Any(a => a.NormalNodes is not null)
+            ? setup.Areas.Sum(a => a.NormalNodes?.Count ?? 0).ToString()
+            : "legacy";
+        _services.Log.Info($"[LoadoutSwitcher] DS apply -> {result} (areas={setup.Areas.Count} factors={factors} anchors={anchors})");
         var (type, key) = result switch
         {
             DeepSlumberApplyResult.Success        => (NoticeTipType.GreenBar, "ds.toast.applied"),
