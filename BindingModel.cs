@@ -17,11 +17,14 @@ internal sealed class BindingModel
     public int ProfessionId { get; set; }
     public List<AreaModel> Areas { get; set; } = new();
 
-    /// <summary>One bound area: which area to enable and its middle-node phantom-factor sockets.</summary>
+    /// <summary>One bound area: which area to enable, the tree (Anchor node ids) it must activate, and
+    /// its middle-node phantom-factor sockets. <see cref="NormalNodes"/> is null for a binding stored
+    /// before tree capture existed — the reconciler then leaves the live tree alone (factor-only).</summary>
     public sealed class AreaModel
     {
         public int AreaId { get; set; }
         public List<int[]> Factors { get; set; } = new(); // [nodeId, itemId]
+        public List<int>? NormalNodes { get; set; }        // activated Anchor node ids; null = legacy (uncaptured)
     }
 
     public static BindingModel From(DeepSlumberSetup s) => new()
@@ -31,6 +34,7 @@ internal sealed class BindingModel
         {
             AreaId = a.AreaId,
             Factors = a.Factors.Select(f => new[] { f[0], f[1] }).ToList(),
+            NormalNodes = a.NormalNodes?.ToList(), // preserve null (legacy) vs a captured (possibly empty) tree
         }).ToList(),
     };
 
@@ -38,5 +42,6 @@ internal sealed class BindingModel
         ProfessionId,
         Areas.Select(a => new DeepSlumberAreaBinding(
             a.AreaId,
-            a.Factors.Select(f => new[] { f[0], f[1] }).ToList())).ToList());
+            a.Factors.Select(f => new[] { f[0], f[1] }).ToList())
+        { NormalNodes = a.NormalNodes?.ToList() }).ToList());
 }

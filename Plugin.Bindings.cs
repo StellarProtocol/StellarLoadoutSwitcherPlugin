@@ -71,6 +71,10 @@ public sealed partial class Plugin
         // the logs site's current-season scoping (services/stellar-logs/site/src/lib/deepslumber.ts,
         // owner design 2026-08-23). Within it, only the ENABLED area per sub-type (1-of-N), and only
         // REAL socketed factors (itemId != 0 — an unlocked-but-empty middle socket is not a factor).
+        // Also capture the TREE (activated Anchor node ids) so a switch between builds on the SAME line
+        // but a DIFFERENT tree resets + rebuilds the tree before socketing (owner 2026-09-01 — the game
+        // has no per-node anchor removal). A captured (non-null) tree, possibly empty, is the exact
+        // target; legacy bindings with no tree stay factor-only.
         var currentLine = state.Lines.Count == 0 ? int.MinValue : state.Lines.Max(l => l.LineId);
         var areas = state.Lines
             .Where(l => l.LineId == currentLine)
@@ -81,7 +85,13 @@ public sealed partial class Plugin
                 a.MiddleNodes
                     .Where(m => m.Length >= 2 && m[1] != 0)
                     .Select(m => new[] { m[0], m[1] })
-                    .OrderBy(f => f[0]).ToList()))
+                    .OrderBy(f => f[0]).ToList())
+            {
+                NormalNodes = a.NormalNodes
+                    .Where(n => n.Length >= 1)
+                    .Select(n => n[0])
+                    .OrderBy(x => x).ToList(),
+            })
             .ToList();
 
         var setup = new DeepSlumberSetup(prof, areas);
