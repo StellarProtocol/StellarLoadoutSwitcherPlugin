@@ -9,7 +9,7 @@
     <NoWarn>CS8632;CS8765</NoWarn>
     <RootNamespace>Stellar.LoadoutSwitcher</RootNamespace>
     <AssemblyName>Stellar.LoadoutSwitcher</AssemblyName>
-    <Version>2.3.0</Version>
+    <Version>2.4.0</Version>
     <Deterministic>true</Deterministic>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>
@@ -19,6 +19,13 @@
     <PackageReference Include="Stellar.Abstractions"       Version="2.5.0" />
     <PackageReference Include="Stellar.PluginContracts"    Version="2.0.0" />
     <PackageReference Include="Stellar.Plugin.InteropRefs" Version="2.0.0" />
+  </ItemGroup>
+  <!-- The unit-test project is a sibling folder under this repo root; keep its sources out of the
+       plugin's default `**/*.cs` glob (else its xUnit test files + generated obj land in the plugin). -->
+  <ItemGroup>
+    <Compile Remove="Stellar.LoadoutSwitcher.Tests/**/*.cs" />
+    <EmbeddedResource Remove="Stellar.LoadoutSwitcher.Tests/**/*" />
+    <None Remove="Stellar.LoadoutSwitcher.Tests/**/*" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Lang/en.json" LogicalName="Stellar.LoadoutSwitcher.Lang.en.json" />
