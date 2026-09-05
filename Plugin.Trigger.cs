@@ -49,6 +49,12 @@ public sealed partial class Plugin
     // saved-loadout-list edits that don't move the selection).
     private void OnLoadoutsChanged()
     {
+        // First point in the session where the game's loadout ids are known — the legacy config
+        // bindings can only be migrated once we have candidate ids to consult (Plugin.Bindings.cs).
+        // Runs before the edge check so the one-time copy does not wait for the user to open the
+        // window or switch loadouts. A no-op after every id has been consulted.
+        MigrateLegacyBindings();
+
         var idx = _services.Loadout.CurrentIndex;
         if (idx == _lastIndex) return;
         _lastIndex = idx;

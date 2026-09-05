@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageReference Include="xunit" Version="2.6.6" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.6" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Same published SDK the plugin builds against; Stellar.Abstractions is pure BCL (no Unity /
+         IL2CPP / BepInEx), so a plain test host can load it. Needed only for DeepSlumberSetup, which
+         BindingModel maps to and from. -->
+    <PackageReference Include="Stellar.Abstractions" Version="2.5.0" />
+  </ItemGroup>
+  <!-- Compile the persistence DTO + decision rules directly; no game install needed. -->
+  <ItemGroup>
+    <Compile Include="../BindingModel.cs" />
+    <Compile Include="../BindingPersistence.cs" />
+  </ItemGroup>
+</Project>
