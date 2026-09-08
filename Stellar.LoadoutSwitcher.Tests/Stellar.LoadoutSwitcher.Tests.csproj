@@ -16,7 +16,7 @@
          BindingModel maps to and from. -->
     <!-- Bumped to the LOCAL dev build carrying Task 1's IPlayerIdentity.CharId (not yet published);
          retarget to the real released version once framework Task 1 ships. -->
-    <PackageReference Include="Stellar.Abstractions" Version="2.6.3-charid-dev" />
+    <PackageReference Include="Stellar.Abstractions" Version="2.6.4" />
   </ItemGroup>
   <!-- Compile the persistence DTO + decision rules directly; no game install needed. -->
   <ItemGroup>
