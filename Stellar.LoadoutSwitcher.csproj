@@ -15,8 +15,10 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- DS binding: consumes IDeepSlumber.ApplySetupAsync + DeepSlumberSetup incl. the tree
-         (DeepSlumberAreaBinding.NormalNodes, framework 2.5.0). -->
-    <PackageReference Include="Stellar.Abstractions"       Version="2.5.0" />
+         (DeepSlumberAreaBinding.NormalNodes, framework 2.5.0). Bumped to the LOCAL dev build carrying
+         Task 1's IPlayerIdentity.CharId (not yet published) — retarget to the real released version
+         once framework Task 1 ships. -->
+    <PackageReference Include="Stellar.Abstractions"       Version="2.6.3-charid-dev" />
     <PackageReference Include="Stellar.PluginContracts"    Version="2.0.0" />
     <PackageReference Include="Stellar.Plugin.InteropRefs" Version="2.0.0" />
   </ItemGroup>

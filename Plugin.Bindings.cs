@@ -63,29 +63,62 @@ public sealed partial class Plugin
         set { _cfg.Set(AutoApplyKey, value); _cfg.Save(); }
     }
 
-    /// <summary>The Deep-Slumber setup bound to <paramref name="loadoutId"/>, or null if unbound.</summary>
+    /// <summary>The current character's id (<c>PlayerState.CharId</c>); <c>0</c> while unresolved
+    /// (title / character select / just after logout).</summary>
+    private long CurCharId => _services.PlayerState.CharId;
+
+    /// <summary>The current character's bindings dict, running the one-time global re-home first. Null
+    /// when the char id is unresolved (<c>0</c>) — callers must refuse to read/write under an unknown
+    /// character rather than fall back to the (possibly wrong) legacy global set.</summary>
+    private Dictionary<int, BindingModel>? CurrentBindings()
+    {
+        if (CurCharId == 0) return null;
+        BindingPersistence.MigrateGlobalToCharacter(_doc, CurCharId);
+        return _doc.Characters.TryGetValue(CurCharId, out var d) ? d : (_doc.Characters[CurCharId] = new());
+    }
+
+    /// <summary>Mirror the current character's set into the legacy flat <c>Bindings</c> field so a
+    /// rollback to a pre-per-character build still applies the right (current-character) bindings.
+    /// Called inside <see cref="PersistBindings"/>; a no-op (leaves the mirror untouched) while the
+    /// character is unresolved.</summary>
+    private void MirrorCurrentToLegacy()
+    {
+        if (CurrentBindings() is { } cur) _doc.Bindings = new Dictionary<int, BindingModel>(cur);
+    }
+
+    /// <summary>The Deep-Slumber setup bound to <paramref name="loadoutId"/> for the CURRENT character,
+    /// or null if unbound or the character is unresolved.</summary>
     internal DeepSlumberSetup? GetBinding(int loadoutId)
     {
         MigrateLegacyBindings();
-        return _doc.Bindings.TryGetValue(loadoutId, out var model) ? model.ToSetup() : null;
+        return CurrentBindings() is { } cur && cur.TryGetValue(loadoutId, out var model) ? model.ToSetup() : null;
     }
 
-    /// <summary>Removes the binding for <paramref name="loadoutId"/>, if any. The frozen legacy config
-    /// key is NOT touched (rollback safety); the id is recorded as consulted so the cleared binding can
-    /// never be migrated back in.</summary>
+    /// <summary>Removes the binding for <paramref name="loadoutId"/> under the CURRENT character, if
+    /// any. The frozen legacy config key is NOT touched (rollback safety); the id is recorded as
+    /// consulted so the cleared binding can never be migrated back in. No-ops when the character is
+    /// unresolved.</summary>
     internal void ClearBinding(int loadoutId)
     {
         MigrateLegacyBindings();
-        var removed = _doc.Bindings.Remove(loadoutId);
+        var cur = CurrentBindings();
+        if (cur is null)
+        {
+            DiagBindAborted(loadoutId, "char unresolved");
+            return;
+        }
+
+        var removed = cur.Remove(loadoutId);
         var marked = _doc.MarkMigrated(loadoutId);
         if (removed || marked) PersistBindings();
     }
 
-    /// <summary>Snapshot the live active line + factors of the CURRENT loadout and store it.
-    /// Returns false without storing anything if the current loadout or Deep-Slumber state isn't
-    /// available yet, or if the live profession id hasn't resolved (a binding stored with
-    /// <c>ProfessionId == 0</c> could never pass the auto-apply class guard, since a real
-    /// profession id is never 0 — it would just silently never apply).</summary>
+    /// <summary>Snapshot the live active line + factors of the CURRENT loadout and store it under the
+    /// CURRENT character. Returns false without storing anything if the current loadout or Deep-Slumber
+    /// state isn't available yet, if the live profession id hasn't resolved (a binding stored with
+    /// <c>ProfessionId == 0</c> could never pass the auto-apply class guard, since a real profession id
+    /// is never 0 — it would just silently never apply), or if the character is unresolved (a capture
+    /// under an unknown character could not be attributed correctly).</summary>
     internal bool BindCurrent()
     {
         MigrateLegacyBindings();
@@ -93,6 +126,13 @@ public sealed partial class Plugin
         var idx = _services.Loadout.CurrentIndex;
         var state = _services.DeepSlumber.GetState();
         if (idx is null || state is null) return false;
+
+        var cur = CurrentBindings();
+        if (cur is null)
+        {
+            DiagBindAborted(idx.Value, "char unresolved");
+            return false;
+        }
 
         var prof = _services.Loadout.LiveState?.ProfessionId ?? 0;
         if (prof == 0)
@@ -102,7 +142,7 @@ public sealed partial class Plugin
         }
 
         var setup = new DeepSlumberSetup(prof, CaptureCurrentSeasonAreas(state));
-        _doc.Bindings[idx.Value] = BindingModel.From(setup);
+        cur[idx.Value] = BindingModel.From(setup);
         _doc.MarkMigrated(idx.Value);
         PersistBindings();
         DiagBound(idx.Value, setup);
@@ -143,7 +183,10 @@ public sealed partial class Plugin
     }
 
     private void PersistBindings()
-        => _services.Data.Write(BindingPersistence.FileName, BindingPersistence.Serialize(_doc));
+    {
+        MirrorCurrentToLegacy();
+        _services.Data.Write(BindingPersistence.FileName, BindingPersistence.Serialize(_doc));
+    }
 
     // One-time-per-loadout-id copy of the legacy config bindings into plugindata. Runs off whatever
     // loadout ids the game currently reports; a no-op (one HashSet probe per slot) once they have all

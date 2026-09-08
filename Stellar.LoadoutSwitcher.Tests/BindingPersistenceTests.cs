@@ -266,4 +266,24 @@ public sealed class BindingPersistenceTests
         Assert.Equal(new[] { 1, 20002 }, reloaded.Bindings[3].Areas.ConvertAll(a => a.AreaId));
         Assert.Equal(new[] { 1, 2, 3 }, reloaded.MigratedConfigIds);
     }
+
+    // ---- per-character bindings (Task 2: keyed on PlayerState.CharId) ------------------------
+
+    [Fact]
+    public void PerCharacter_BindingsAreIsolated_AndGlobalMigratesOnce()
+    {
+        var doc = new BindingsDocument();
+        // legacy global binding (pre-feature): loadout 1 bound, no Characters yet
+        doc.Bindings[1] = new BindingModel { ProfessionId = 3 };
+
+        // first resolve as char A → global re-homes onto A, mirror stays in Bindings, flag set
+        BindingPersistence.MigrateGlobalToCharacter(doc, charId: 111);
+        Assert.True(doc.MigratedGlobalToChar);
+        Assert.True(doc.Characters[111].ContainsKey(1));
+        Assert.True(doc.Bindings.ContainsKey(1));           // legacy mirror kept for rollback
+
+        // a DIFFERENT character does not inherit A's binding, and migration never re-runs
+        BindingPersistence.MigrateGlobalToCharacter(doc, charId: 222);
+        Assert.False(doc.Characters.ContainsKey(222) && doc.Characters[222].ContainsKey(1));
+    }
 }
