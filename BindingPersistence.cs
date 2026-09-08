@@ -27,13 +27,25 @@ internal enum MigrationDecision
 /// </summary>
 internal sealed class BindingsDocument
 {
-    /// <summary>Loadout id → its bound Deep-Slumber setup. Plugindata is authoritative.</summary>
+    /// <summary>Loadout id → its bound Deep-Slumber setup. Legacy GLOBAL mirror — kept in sync with the
+    /// CURRENT character's set (see <see cref="Characters"/>) purely for rollback safety, so a build
+    /// predating per-character bindings still finds the right (current-character) bindings.</summary>
     public Dictionary<int, BindingModel> Bindings { get; set; } = new();
 
     /// <summary>Loadout ids whose legacy <c>binding.&lt;id&gt;#</c> config key has already been read
     /// (whether or not it held anything). The legacy keys are never deleted, so without this ledger a
     /// later migration pass would resurrect a binding the user had cleared.</summary>
     public List<int> MigratedConfigIds { get; set; } = new();
+
+    /// <summary>Authoritative per-character store: charId → (loadoutId → binding). Keyed on the
+    /// framework's <c>PlayerState.CharId</c> (owner ruling — bindings must not leak across characters
+    /// or accounts sharing one client).</summary>
+    public Dictionary<long, Dictionary<int, BindingModel>> Characters { get; set; } = new();
+
+    /// <summary>Set once the pre-feature global <see cref="Bindings"/> have been re-homed onto a
+    /// character. Never re-runs after that, even for a different character, so a second character never
+    /// inherits the first character's pre-migration set.</summary>
+    public bool MigratedGlobalToChar { get; set; }
 
     // Not serialized (private fields are invisible to System.Text.Json) — an O(1) mirror of
     // MigratedConfigIds, built on first use.
@@ -136,9 +148,31 @@ internal static class BindingPersistence
          : configHasBinding ? MigrationDecision.MigrateFromConfig
          : MigrationDecision.StartEmpty;
 
+    /// <summary>One-time re-home of the pre-per-character global <see cref="BindingsDocument.Bindings"/>
+    /// onto <paramref name="charId"/>. COPIES — the legacy <see cref="BindingsDocument.Bindings"/> mirror
+    /// is left in place for rollback (a pre-feature build still reads the right, current-character, set).
+    /// No-ops once <see cref="BindingsDocument.MigratedGlobalToChar"/> is set (so a second/different
+    /// character never inherits the first character's pre-migration bindings) or while
+    /// <paramref name="charId"/> is unresolved (<c>0</c>).</summary>
+    /// <param name="doc">The document to migrate in place.</param>
+    /// <param name="charId">The resolved current character id (<c>PlayerState.CharId</c>).</param>
+    internal static void MigrateGlobalToCharacter(BindingsDocument doc, long charId)
+    {
+        if (doc.MigratedGlobalToChar || charId == 0) return;   // already re-homed, or id not resolved yet
+        if (doc.Bindings.Count > 0)
+        {
+            var dst = doc.Characters.TryGetValue(charId, out var d) ? d : (doc.Characters[charId] = new());
+            foreach (var kv in doc.Bindings) dst[kv.Key] = kv.Value;   // COPY — the legacy Bindings mirror is kept
+        }
+        doc.MigratedGlobalToChar = true;                       // set even when there was nothing to copy (fresh install)
+    }
+
     /// <summary>Drop null members from a decoded document so every binding is safe to map to a
     /// <c>DeepSlumberSetup</c> without null checks. A null <c>NormalNodes</c> is PRESERVED — it is the
-    /// legacy "tree was never captured" marker the reconciler keys on (factor-only, no reset).</summary>
+    /// legacy "tree was never captured" marker the reconciler keys on (factor-only, no reset). Cleans
+    /// the legacy global <see cref="BindingsDocument.Bindings"/> mirror AND every per-character dict in
+    /// <see cref="BindingsDocument.Characters"/> the same way, so a hand-corrupted <c>bindings.json</c>
+    /// can't NPE <c>GetBinding</c> from either store (QA follow-up, Task 2).</summary>
     /// <param name="doc">A decoded document (may be null).</param>
     /// <returns>The same document instance, cleaned; a fresh empty one when null.</returns>
     internal static BindingsDocument Normalize(BindingsDocument? doc)
@@ -146,9 +180,28 @@ internal static class BindingPersistence
         if (doc is null) return new BindingsDocument();
         doc.Bindings ??= new Dictionary<int, BindingModel>();
         doc.MigratedConfigIds ??= new List<int>();
+        doc.Characters ??= new Dictionary<long, Dictionary<int, BindingModel>>();
 
-        var clean = new Dictionary<int, BindingModel>(doc.Bindings.Count);
-        foreach (var kv in doc.Bindings)
+        doc.Bindings = CleanBindings(doc.Bindings);
+
+        var cleanChars = new Dictionary<long, Dictionary<int, BindingModel>>(doc.Characters.Count);
+        foreach (var kv in doc.Characters) cleanChars[kv.Key] = CleanBindings(kv.Value);
+        doc.Characters = cleanChars;
+
+        return doc;
+    }
+
+    /// <summary>Drop null <see cref="BindingModel"/> entries from <paramref name="source"/> and
+    /// null-guard/scrub each survivor's <c>Areas</c>/<c>Factors</c> (see <see cref="Normalize"/>).
+    /// A null <paramref name="source"/> (a corrupted nested <c>Characters</c> entry) normalizes to an
+    /// empty dict rather than propagating the null.</summary>
+    /// <param name="source">The loadoutId → binding dict to clean (may be null).</param>
+    /// <returns>A new, cleaned dict — never null.</returns>
+    private static Dictionary<int, BindingModel> CleanBindings(Dictionary<int, BindingModel>? source)
+    {
+        source ??= new Dictionary<int, BindingModel>();
+        var clean = new Dictionary<int, BindingModel>(source.Count);
+        foreach (var kv in source)
         {
             if (kv.Value is null) continue;
             kv.Value.Areas ??= new List<BindingModel.AreaModel>();
@@ -160,7 +213,27 @@ internal static class BindingPersistence
             }
             clean[kv.Key] = kv.Value;
         }
-        doc.Bindings = clean;
-        return doc;
+        return clean;
+    }
+
+    /// <summary>Adopts a legacy-config binding for ONE loadout into <paramref name="charId"/>'s OWN
+    /// per-character dict (QA follow-up, Task 2 Fix 1) — previously this landed in the legacy global
+    /// <see cref="BindingsDocument.Bindings"/> mirror, which the subsequent <c>MirrorCurrentToLegacy</c>
+    /// pass then rebuilds WHOLESALE from the current character's set, silently dropping the
+    /// just-adopted binding once <see cref="BindingsDocument.MigratedGlobalToChar"/> is already true.
+    /// No-ops when <paramref name="charId"/> is unresolved (<c>0</c>) — the caller must not mark the
+    /// loadout id as consulted in that case, so it is retried once a character resolves; never adopt
+    /// under an unknown character.</summary>
+    /// <param name="doc">The document to adopt into.</param>
+    /// <param name="charId">The current, resolved character id.</param>
+    /// <param name="loadoutId">The loadout id the legacy binding was captured under.</param>
+    /// <param name="legacy">The decoded legacy binding to adopt.</param>
+    /// <returns>True when adopted; false (no-op) when <paramref name="charId"/> is <c>0</c>.</returns>
+    internal static bool AdoptLegacyBinding(BindingsDocument doc, long charId, int loadoutId, BindingModel legacy)
+    {
+        if (charId == 0) return false;
+        var dst = doc.Characters.TryGetValue(charId, out var d) ? d : (doc.Characters[charId] = new());
+        dst[loadoutId] = legacy;
+        return true;
     }
 }

@@ -59,6 +59,10 @@ public sealed partial class Plugin
         if (idx == _lastIndex) return;
         _lastIndex = idx;
         if (idx is null || !AutoApply) return;
+        // Refuse to arm during the unresolved-character window (login/char-select/just after logout):
+        // GetBinding would already return null here (CurrentBindings() refuses under CharId == 0), but
+        // gate explicitly so a switch mid-window is never armed against another character's binding.
+        if (_services.PlayerState.CharId == 0) { DiagSkippedApply(idx.Value, "char unresolved"); return; }
         if (GetBinding(idx.Value) is null) return;
         _pendingIndex = idx;
         _pendingDeadline = _tick + SettleTimeoutTicks;

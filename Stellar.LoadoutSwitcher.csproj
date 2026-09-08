@@ -9,14 +9,15 @@
     <NoWarn>CS8632;CS8765</NoWarn>
     <RootNamespace>Stellar.LoadoutSwitcher</RootNamespace>
     <AssemblyName>Stellar.LoadoutSwitcher</AssemblyName>
-    <Version>2.4.0</Version>
+    <Version>2.5.0</Version>
     <Deterministic>true</Deterministic>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>
   <ItemGroup>
     <!-- DS binding: consumes IDeepSlumber.ApplySetupAsync + DeepSlumberSetup incl. the tree
-         (DeepSlumberAreaBinding.NormalNodes, framework 2.5.0). -->
-    <PackageReference Include="Stellar.Abstractions"       Version="2.5.0" />
+         (DeepSlumberAreaBinding.NormalNodes, framework 2.5.0). Requires framework 2.6.4 for
+         IPlayerIdentity.CharId (per-character bindings). -->
+    <PackageReference Include="Stellar.Abstractions"       Version="2.6.4" />
     <PackageReference Include="Stellar.PluginContracts"    Version="2.0.0" />
     <PackageReference Include="Stellar.Plugin.InteropRefs" Version="2.0.0" />
   </ItemGroup>
