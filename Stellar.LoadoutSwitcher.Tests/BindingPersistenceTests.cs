@@ -286,4 +286,49 @@ public sealed class BindingPersistenceTests
         BindingPersistence.MigrateGlobalToCharacter(doc, charId: 222);
         Assert.False(doc.Characters.ContainsKey(222) && doc.Characters[222].ContainsKey(1));
     }
+
+    // ---- QA follow-up Fix 1: legacy adoption must land in the CURRENT character, not be dropped ----
+
+    [Fact]
+    public void A_legacy_binding_first_seen_after_migration_is_adopted_into_the_current_character_not_lost()
+    {
+        var doc = new BindingsDocument();
+        // global→char migration already ran for a DIFFERENT character (111) — MigratedGlobalToChar flips true
+        BindingPersistence.MigrateGlobalToCharacter(doc, charId: 111);
+        Assert.True(doc.MigratedGlobalToChar);
+
+        // loadout 9 carries a legacy config binding first SEEN now, resolving under a DIFFERENT current
+        // character (222) — it must land in 222's OWN dict, never the legacy global mirror
+        var legacy = new BindingModel { ProfessionId = 7 };
+        Assert.True(BindingPersistence.AdoptLegacyBinding(doc, charId: 222, loadoutId: 9, legacy));
+        Assert.Equal(7, doc.Characters[222][9].ProfessionId);
+
+        // the subsequent MirrorCurrentToLegacy pass rebuilds Bindings WHOLESALE from Characters[222] —
+        // the adopted binding must survive that (per-char store is the source of truth), not be dropped
+        doc.Bindings = new Dictionary<int, BindingModel>(doc.Characters[222]);
+        Assert.Equal(7, doc.Bindings[9].ProfessionId);
+
+        // an unresolved character (0) must never adopt — the id stays pending for a later, resolved pass
+        Assert.False(BindingPersistence.AdoptLegacyBinding(doc, charId: 0, loadoutId: 3, legacy));
+        Assert.False(doc.Characters.ContainsKey(0));
+    }
+
+    // ---- QA follow-up Fix 2: Normalize deep-cleans nested Characters entries too -------------------
+
+    [Fact]
+    public void Normalize_deep_cleans_a_corrupted_nested_characters_entry_without_throwing()
+    {
+        var json = "{\"Characters\":{\"111\":{\"1\":null,\"2\":{\"ProfessionId\":2,\"Areas\":[null,"
+            + "{\"AreaId\":1,\"Factors\":[[100],null,[101,20020907]]}]}},\"222\":null}}";
+
+        var doc = BindingPersistence.Deserialize(Encoding.UTF8.GetBytes(json), out var corrupt);
+
+        Assert.False(corrupt);
+        Assert.False(doc.Characters[111].ContainsKey(1));                 // null BindingModel dropped
+        Assert.Single(doc.Characters[111][2].Areas);                      // null area dropped
+        Assert.Equal(new[] { 101, 20020907 },
+            Assert.Single(doc.Characters[111][2].Areas[0].Factors));      // short/null factor dropped
+        Assert.Empty(doc.Characters[222]);                                // null nested dict → empty, not null
+        Assert.Equal(2, doc.Characters[111][2].ToSetup().ProfessionId);   // safe to map — no NPE
+    }
 }

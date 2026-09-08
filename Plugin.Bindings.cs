@@ -191,11 +191,21 @@ public sealed partial class Plugin
     // One-time-per-loadout-id copy of the legacy config bindings into plugindata. Runs off whatever
     // loadout ids the game currently reports; a no-op (one HashSet probe per slot) once they have all
     // been consulted, and a hard no-op before the loadout API resolves. The config keys are only READ.
+    //
+    // QA follow-up (Task 2 Fix 1): adoption routes into the CURRENT character's own dict via
+    // AdoptLegacyBinding, never the legacy global Bindings mirror — writing there silently lost the
+    // adoption once MirrorCurrentToLegacy (which rebuilds Bindings wholesale from the current
+    // character) next ran. While the character is unresolved (CurCharId == 0) this skips adoption
+    // entirely and does NOT mark any id migrated, so every id stays pending for a later, resolved pass.
     private void MigrateLegacyBindings()
     {
         if (!_services.Loadout.IsAvailable) return;
         var slots = _services.Loadout.GetSlots();
         if (slots.Count == 0) return;
+
+        var charId = CurCharId;
+        if (charId == 0) return;   // char unresolved — never adopt under an unknown character
+        var cur = CurrentBindings()!;
 
         var adopted = new List<int>();
         var consulted = false;
@@ -204,9 +214,9 @@ public sealed partial class Plugin
             if (!_doc.MarkMigrated(slot.Index)) continue;   // this id was already consulted
             consulted = true;
             var legacy = _cfg.Get<BindingModel?>(BindingKey(slot.Index), null);
-            if (BindingPersistence.Decide(_doc.Bindings.ContainsKey(slot.Index), legacy is not null)
+            if (BindingPersistence.Decide(cur.ContainsKey(slot.Index), legacy is not null)
                 != MigrationDecision.MigrateFromConfig) continue;
-            _doc.Bindings[slot.Index] = legacy!;
+            BindingPersistence.AdoptLegacyBinding(_doc, charId, slot.Index, legacy!);
             adopted.Add(slot.Index);
         }
 

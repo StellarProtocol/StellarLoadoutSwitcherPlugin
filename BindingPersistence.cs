@@ -169,7 +169,10 @@ internal static class BindingPersistence
 
     /// <summary>Drop null members from a decoded document so every binding is safe to map to a
     /// <c>DeepSlumberSetup</c> without null checks. A null <c>NormalNodes</c> is PRESERVED — it is the
-    /// legacy "tree was never captured" marker the reconciler keys on (factor-only, no reset).</summary>
+    /// legacy "tree was never captured" marker the reconciler keys on (factor-only, no reset). Cleans
+    /// the legacy global <see cref="BindingsDocument.Bindings"/> mirror AND every per-character dict in
+    /// <see cref="BindingsDocument.Characters"/> the same way, so a hand-corrupted <c>bindings.json</c>
+    /// can't NPE <c>GetBinding</c> from either store (QA follow-up, Task 2).</summary>
     /// <param name="doc">A decoded document (may be null).</param>
     /// <returns>The same document instance, cleaned; a fresh empty one when null.</returns>
     internal static BindingsDocument Normalize(BindingsDocument? doc)
@@ -179,8 +182,26 @@ internal static class BindingPersistence
         doc.MigratedConfigIds ??= new List<int>();
         doc.Characters ??= new Dictionary<long, Dictionary<int, BindingModel>>();
 
-        var clean = new Dictionary<int, BindingModel>(doc.Bindings.Count);
-        foreach (var kv in doc.Bindings)
+        doc.Bindings = CleanBindings(doc.Bindings);
+
+        var cleanChars = new Dictionary<long, Dictionary<int, BindingModel>>(doc.Characters.Count);
+        foreach (var kv in doc.Characters) cleanChars[kv.Key] = CleanBindings(kv.Value);
+        doc.Characters = cleanChars;
+
+        return doc;
+    }
+
+    /// <summary>Drop null <see cref="BindingModel"/> entries from <paramref name="source"/> and
+    /// null-guard/scrub each survivor's <c>Areas</c>/<c>Factors</c> (see <see cref="Normalize"/>).
+    /// A null <paramref name="source"/> (a corrupted nested <c>Characters</c> entry) normalizes to an
+    /// empty dict rather than propagating the null.</summary>
+    /// <param name="source">The loadoutId → binding dict to clean (may be null).</param>
+    /// <returns>A new, cleaned dict — never null.</returns>
+    private static Dictionary<int, BindingModel> CleanBindings(Dictionary<int, BindingModel>? source)
+    {
+        source ??= new Dictionary<int, BindingModel>();
+        var clean = new Dictionary<int, BindingModel>(source.Count);
+        foreach (var kv in source)
         {
             if (kv.Value is null) continue;
             kv.Value.Areas ??= new List<BindingModel.AreaModel>();
@@ -192,7 +213,27 @@ internal static class BindingPersistence
             }
             clean[kv.Key] = kv.Value;
         }
-        doc.Bindings = clean;
-        return doc;
+        return clean;
+    }
+
+    /// <summary>Adopts a legacy-config binding for ONE loadout into <paramref name="charId"/>'s OWN
+    /// per-character dict (QA follow-up, Task 2 Fix 1) — previously this landed in the legacy global
+    /// <see cref="BindingsDocument.Bindings"/> mirror, which the subsequent <c>MirrorCurrentToLegacy</c>
+    /// pass then rebuilds WHOLESALE from the current character's set, silently dropping the
+    /// just-adopted binding once <see cref="BindingsDocument.MigratedGlobalToChar"/> is already true.
+    /// No-ops when <paramref name="charId"/> is unresolved (<c>0</c>) — the caller must not mark the
+    /// loadout id as consulted in that case, so it is retried once a character resolves; never adopt
+    /// under an unknown character.</summary>
+    /// <param name="doc">The document to adopt into.</param>
+    /// <param name="charId">The current, resolved character id.</param>
+    /// <param name="loadoutId">The loadout id the legacy binding was captured under.</param>
+    /// <param name="legacy">The decoded legacy binding to adopt.</param>
+    /// <returns>True when adopted; false (no-op) when <paramref name="charId"/> is <c>0</c>.</returns>
+    internal static bool AdoptLegacyBinding(BindingsDocument doc, long charId, int loadoutId, BindingModel legacy)
+    {
+        if (charId == 0) return false;
+        var dst = doc.Characters.TryGetValue(charId, out var d) ? d : (doc.Characters[charId] = new());
+        dst[loadoutId] = legacy;
+        return true;
     }
 }
