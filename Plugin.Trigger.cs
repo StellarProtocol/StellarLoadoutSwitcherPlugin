@@ -56,9 +56,16 @@ public sealed partial class Plugin
         MigrateLegacyBindings();
 
         var idx = _services.Loadout.CurrentIndex;
-        if (idx == _lastIndex) return;
+        var prev = _lastIndex;
+        if (idx == prev) return;
         _lastIndex = idx;
         if (idx is null || !AutoApply) return;
+        // Only a real in-world SWITCH between two KNOWN selections arms an apply. The first resolution of
+        // the index at login/char-select is prev==null (unresolved→resolved), NOT a switch — arming there
+        // re-applies the bound setup over whatever the player changed in vanilla ("switches without
+        // switching loadouts", Midokuni 2026-09-21). The baseline is now recorded (_lastIndex = idx);
+        // the next genuine switch arms.
+        if (!TriggerEdge.IsLoadoutSwitch(prev, idx)) { DiagSkippedApply(idx.Value, "baseline (login/first resolve)"); return; }
         // Refuse to arm during the unresolved-character window (login/char-select/just after logout):
         // GetBinding would already return null here (CurrentBindings() refuses under CharId == 0), but
         // gate explicitly so a switch mid-window is never armed against another character's binding.
