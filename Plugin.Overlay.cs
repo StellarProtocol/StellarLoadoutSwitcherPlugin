@@ -20,7 +20,7 @@ namespace Stellar.LoadoutSwitcher;
 /// </summary>
 public sealed partial class Plugin
 {
-    // Over-provisioned above any realistic saved-loadout count (the hotkey path caps at 8, but the game
+    // Over-provisioned above any realistic saved-loadout count (the hotkey path caps at 10, but the game
     // permits more loadouts). Rows are built ONCE; LoadoutsChanged only updates state + MarkDirty.
     private const int DsRowPoolSize = 24;
 
