@@ -10,8 +10,8 @@ using Stellar.Abstractions.Services;
 namespace Stellar.LoadoutSwitcher;
 
 /// <summary>
-/// Hotkey-driven loadout switcher. Declares 8 bindable actions (<c>loadout.apply.1</c> …
-/// <c>loadout.apply.8</c>, no suggested defaults — the user binds them in Settings →
+/// Hotkey-driven loadout switcher. Declares 10 bindable actions (<c>loadout.apply.1</c> …
+/// <c>loadout.apply.10</c>, no suggested defaults — the user binds them in Settings →
 /// Hotkeys). Pressing the n-th hotkey switches to the n-th saved loadout in
 /// <see cref="ILoadout.GetSlots"/> order via the game's own switch
 /// (<see cref="ILoadout.ApplyAsync"/>), which runs every server-side validation
@@ -26,7 +26,7 @@ namespace Stellar.LoadoutSwitcher;
 /// </summary>
 public sealed partial class Plugin : IStellarPlugin
 {
-    private const int SlotCount = 8;
+    private const int SlotCount = 10;
 
     public string Name => "LoadoutSwitcher";
 
