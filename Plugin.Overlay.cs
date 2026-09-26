@@ -80,6 +80,7 @@ public sealed partial class Plugin
 
         _services.Loadout.LoadoutsChanged += OnDsLoadoutsChanged;
         _services.ClientState.Logout += OnCopyLogout;
+        _loc.LanguageChanged += OnCopyLanguageChanged;
     }
 
     // Hotkey + launcher tile: hiding the window cancels an open copy confirm (spec § 2.3).
@@ -93,6 +94,7 @@ public sealed partial class Plugin
     {
         _services.Loadout.LoadoutsChanged -= OnDsLoadoutsChanged;
         _services.ClientState.Logout -= OnCopyLogout;
+        _loc.LanguageChanged -= OnCopyLanguageChanged;
         try { _dsLauncherEntry?.Dispose(); } catch { /* disposal must not throw */ }
         try { _dsToggle?.Dispose(); } catch { /* disposal must not throw */ }
         try { _dsWindow?.Remove(); } catch { /* disposal must not throw */ }
@@ -135,6 +137,7 @@ public sealed partial class Plugin
                 setup.Areas.Count == 1 ? setup.Areas[0].AreaId : 0,
                 factors);
         }
+        RefreshCopyTexts();   // worn slot, "← <worn>" label, row names — cached, never built per frame
         _dsWindow?.MarkDirty();
     }
 
@@ -179,7 +182,7 @@ public sealed partial class Plugin
             var idx = i;   // capture per row
 
             var nameCell = new CellElement(
-                new TextElement(() => DsRowName(idx), NoWrap: true), Width: 130f);
+                new TextElement(() => DsRowName(idx), Width: 130f, NoWrap: true), Width: 130f);
 
             var statusCell = new CellElement(
                 new TextElement(() => DsStatusText(idx),
@@ -246,7 +249,7 @@ public sealed partial class Plugin
         var helpText = new ColumnElement(new HudElement[]
         {
             new TextElement(() => _loc.T("loadout.dsbindings.help"), () => (ColorRgba?)_services.Theme.Colors.MenuMuted),
-            new TextElement(() => _loc.T("loadout.copy.help"), () => (ColorRgba?)_services.Theme.Colors.MenuMuted),
+            new TextElement(CopyHelpText, () => (ColorRgba?)_services.Theme.Colors.MenuMuted),
         }, Gap: 4f);
 
         var toggleRow = new RowElement(new HudElement[]

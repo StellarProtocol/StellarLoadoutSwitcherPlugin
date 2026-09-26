@@ -143,8 +143,65 @@ public sealed class CopyRulesTests
     [Fact]
     public void Long_worn_names_ellipsize_short_ones_do_not()
     {
-        Assert.Equal("Ici-LF", CopyRules.Ellipsize("Ici-LF", 10));
-        Assert.Equal("Frost Mage…", CopyRules.Ellipsize("Frost Mage Lightning", 10));
+        Assert.Equal("Ici-LF", CopyRules.Ellipsize("Ici-LF", 16));
+        Assert.Equal("Sixteen chars ok", CopyRules.Ellipsize("Sixteen chars ok", 16));   // exactly 16 units fits
+        Assert.Equal("Frost Mage Light…", CopyRules.Ellipsize("Frost Mage Lightning", 16));
+    }
+
+    [Fact]
+    public void CJK_counts_two_units_per_character()
+    {
+        // 12 wide characters = 24 units; 16 units hold 8 of them.
+        Assert.Equal("東京タワーの長い…", CopyRules.Ellipsize("東京タワーの長い名前です", 16));
+        Assert.Equal(2, CopyRules.DisplayUnits("東"));
+        Assert.Equal(1, CopyRules.DisplayUnits("a"));
+    }
+
+    [Fact]
+    public void Emoji_surrogate_pairs_are_never_split()
+    {
+        // "Tank" (4) + six 🔥 (2 each) = 16 units; the seventh does not fit.
+        var cut = CopyRules.Ellipsize("Tank🔥🔥🔥🔥🔥🔥🔥", 16);
+        Assert.Equal("Tank🔥🔥🔥🔥🔥🔥…", cut);
+        for (var i = 0; i < cut.Length; i++)
+        {
+            if (char.IsHighSurrogate(cut[i])) { Assert.True(char.IsLowSurrogate(cut[i + 1])); i++; }
+            else Assert.False(char.IsLowSurrogate(cut[i]));
+        }
+    }
+
+    [Fact]
+    public void Thai_base_plus_marks_stay_one_cluster()
+    {
+        // "ที่" = base + two combining marks = ONE text element (1 unit); a cut never strands a mark.
+        Assert.Equal("ที่ที่…", CopyRules.Ellipsize("ที่ที่ที่", 2));
+    }
+
+    [Fact]
+    public void Refusal_reasons_name_why_nothing_changed()
+    {
+        Assert.Equal("loadout.copy.reasonNotReady", CopyRules.RefusalReasonKey(Stellar.Abstractions.Domain.Loadout.LoadoutResult.GameApiUnavailable));
+        Assert.Equal("loadout.copy.reasonNoSuch", CopyRules.RefusalReasonKey(Stellar.Abstractions.Domain.Loadout.LoadoutResult.NoSuchLoadout));
+        Assert.Equal("loadout.copy.reasonTimeout", CopyRules.RefusalReasonKey(Stellar.Abstractions.Domain.Loadout.LoadoutResult.Timeout));
+        Assert.Equal("loadout.copy.reasonCancelled", CopyRules.RefusalReasonKey(Stellar.Abstractions.Domain.Loadout.LoadoutResult.Cancelled));
+        Assert.Equal("loadout.copy.reasonRefused", CopyRules.RefusalReasonKey(Stellar.Abstractions.Domain.Loadout.LoadoutResult.Rejected));
+        Assert.Equal("loadout.copy.reasonBusy", CopyRules.BusyReasonKey);
+    }
+
+    [Fact]
+    public void Every_copy_string_exists_in_all_five_locales()
+    {
+        var dir = System.IO.Path.Combine(System.AppContext.BaseDirectory, "../../../../Lang");
+        var en = System.Text.Json.JsonDocument.Parse(System.IO.File.ReadAllText(System.IO.Path.Combine(dir, "en.json")));
+        foreach (var lang in new[] { "ja", "th", "id", "fil" })
+        {
+            var doc = System.Text.Json.JsonDocument.Parse(System.IO.File.ReadAllText(System.IO.Path.Combine(dir, lang + ".json")));
+            foreach (var p in en.RootElement.EnumerateObject())
+            {
+                if (!p.Name.StartsWith("loadout.copy.", System.StringComparison.Ordinal)) continue;
+                Assert.True(doc.RootElement.TryGetProperty(p.Name, out var v) && v.GetString()!.Length > 0, $"{lang}: {p.Name}");
+            }
+        }
     }
 
     [Fact]

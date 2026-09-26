@@ -23,12 +23,17 @@
   "loadout.dsbindings.bound": "ผูก Deep-Slumber กับ {0} แล้ว",
   "loadout.dsbindings.bindFailed": "บันทึกไม่สำเร็จ — โปรดลองอีกครั้งในอีกสักครู่",
   "loadout.dsbindings.help": "ผูกชุด Deep-Slumber (สายบ่มเพาะและปัจจัยของมัน) เข้ากับแต่ละโหลดเอาต์ เมื่อเปิด \"ใช้อัตโนมัติ\" ปลั๊กอินจะใช้ชุดนั้นซ้ำทุกครั้งที่คุณสลับไปยังโหลดเอาต์นั้น \"ผูกชุดปัจจุบัน\" จะบันทึก Deep-Slumber ที่คุณใช้อยู่ตอนนี้ไว้กับโหลดเอาต์ที่ใช้งานอยู่ กดปุ่มลัดของโหลดเอาต์ที่ใช้อยู่เพื่อใช้ชุดนั้นอีกครั้ง",
-  "loadout.copy.button": "← {0}",
   "loadout.copy.confirm": "เขียนทับด้วย {0}?",
   "loadout.copy.hintUnsaved": "⚠ รวมการเปลี่ยนแปลงที่ยังไม่บันทึก",
   "loadout.copy.hintClass": "⚠ เปลี่ยน {0} เป็น {1}",
   "loadout.copy.toastCopied": "คัดลอก {0} → {1} แล้ว",
   "loadout.copy.toastParts": "อุปกรณ์ · โมดูล · สกิล · ทาเลนต์ · Battle Imagine · การผูก Deep-Slumber",
   "loadout.copy.toastRefused": "คัดลอกไปยัง {0} ไม่สำเร็จ — ไม่มีอะไรถูกเปลี่ยน",
-  "loadout.copy.help": "\"← <โหลดเอาต์>\" จะคัดลอกโหลดเอาต์ที่คุณใช้อยู่ (ชื่อแสดงบนปุ่ม) ไปยังแถวนั้น — อุปกรณ์ โมดูล สกิล ทาเลนต์ Battle Imagine และการผูก Deep-Slumber ของมัน"
+  "loadout.copy.help": "\"{0} <โหลดเอาต์>\" จะคัดลอกโหลดเอาต์ที่คุณใช้อยู่ (ชื่อแสดงบนปุ่ม) ไปยังแถวนั้น — อุปกรณ์ โมดูล สกิล ทาเลนต์ Battle Imagine และการผูก Deep-Slumber ของมัน",
+  "loadout.copy.reasonBusy": "การสลับโหลดเอาต์ยังไม่เสร็จ",
+  "loadout.copy.reasonNotReady": "ข้อมูลโหลดเอาต์ยังไม่พร้อม",
+  "loadout.copy.reasonNoSuch": "ไม่มีโหลดเอาต์นั้นแล้ว",
+  "loadout.copy.reasonTimeout": "เกมไม่ตอบกลับในเวลาที่กำหนด",
+  "loadout.copy.reasonCancelled": "การคัดลอกถูกยกเลิก",
+  "loadout.copy.reasonRefused": "เกมปฏิเสธ (ดูข้อความของเกม)"
 }

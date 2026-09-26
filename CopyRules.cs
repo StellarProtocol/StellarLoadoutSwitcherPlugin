@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Stellar.Abstractions.Domain.Loadout;
 
 namespace Stellar.LoadoutSwitcher;
 
@@ -78,10 +79,61 @@ internal static class CopyRules
         bool windowShown)
         => windowShown && currentWornId == armedWornId && currentCharId != 0 && currentCharId == armedCharId;
 
-    /// <summary>Cuts <paramref name="name"/> to <paramref name="maxChars"/> characters plus "…" when longer
-    /// (the <c>← &lt;worn&gt;</c> button is a fixed 96 px; the confirm bar shows the full name).</summary>
-    public static string Ellipsize(string name, int maxChars)
-        => name.Length <= maxChars || maxChars <= 0 ? name : name.Substring(0, maxChars).TrimEnd() + "…";
+    /// <summary>Display width of one text element (grapheme): 2 for East-Asian wide/fullwidth scripts and
+    /// emoji (they render about twice as wide as Latin in the overlay font), 1 otherwise.</summary>
+    public static int DisplayUnits(string textElement)
+    {
+        if (string.IsNullOrEmpty(textElement)) return 0;
+        var cp = char.ConvertToUtf32(textElement, 0);   // first code point; combining marks ride along
+        return IsWide(cp) ? 2 : 1;
+    }
+
+    private static bool IsWide(int cp)
+        => (cp >= 0x1100 && cp <= 0x115F)     // Hangul Jamo
+        || (cp >= 0x2E80 && cp <= 0xA4CF)     // CJK radicals … Yi (kana, CJK unified, fullwidth punctuation)
+        || (cp >= 0xAC00 && cp <= 0xD7A3)     // Hangul syllables
+        || (cp >= 0xF900 && cp <= 0xFAFF)     // CJK compatibility ideographs
+        || (cp >= 0xFE30 && cp <= 0xFE4F)     // CJK compatibility forms
+        || (cp >= 0xFF00 && cp <= 0xFF60)     // fullwidth forms
+        || (cp >= 0xFFE0 && cp <= 0xFFE6)     // fullwidth signs
+        || (cp >= 0x1F300 && cp <= 0x1FAFF)   // emoji & pictographs
+        || (cp >= 0x20000 && cp <= 0x3FFFD);  // CJK extension planes
+
+    /// <summary>Cuts <paramref name="name"/> to at most <paramref name="maxUnits"/> display units (see
+    /// <see cref="DisplayUnits"/>) plus "…" when it does not fit. Cuts only on TEXT ELEMENT boundaries
+    /// (<see cref="System.Globalization.StringInfo"/>), so a surrogate pair (emoji) or a Thai base+mark cluster
+    /// is never split. The <c>← &lt;worn&gt;</c> button is a fixed 96 px; the confirm bar shows the full name.</summary>
+    public static string Ellipsize(string name, int maxUnits)
+    {
+        if (string.IsNullOrEmpty(name) || maxUnits <= 0) return name ?? "";
+        var e = System.Globalization.StringInfo.GetTextElementEnumerator(name);
+        var used = 0;
+        var cutAt = -1;
+        while (e.MoveNext())
+        {
+            var units = DisplayUnits(e.GetTextElement());
+            if (used + units > maxUnits) { cutAt = e.ElementIndex; break; }
+            used += units;
+        }
+        return cutAt < 0 ? name : name.Substring(0, cutAt).TrimEnd() + "…";
+    }
+
+    /// <summary>Localization key for the second line of the "couldn't copy" toast — WHY nothing changed.
+    /// <c>Rejected</c> is the game's own refusal (it shows the reason itself) or the framework's in-flight
+    /// gate.</summary>
+    public static string RefusalReasonKey(LoadoutResult result) => result switch
+    {
+        LoadoutResult.GameApiUnavailable => "loadout.copy.reasonNotReady",
+        LoadoutResult.PlayerNotInWorld   => "loadout.copy.reasonNotReady",
+        LoadoutResult.NoSuchLoadout      => "loadout.copy.reasonNoSuch",
+        LoadoutResult.Timeout            => "loadout.copy.reasonTimeout",
+        LoadoutResult.Cancelled          => "loadout.copy.reasonCancelled",
+        LoadoutResult.InCombat           => "loadout.copy.reasonRefused",
+        _                                => "loadout.copy.reasonRefused",
+    };
+
+    /// <summary>Key for the plugin's OWN pre-dispatch refusal: a switch or Deep-Slumber apply is running.</summary>
+    public const string BusyReasonKey = "loadout.copy.reasonBusy";
 
     /// <summary>The always-on outcome log line body:
     /// <c>copy &lt;src&gt;→&lt;dst&gt; ok|refused(&lt;result&gt;)</c>.</summary>

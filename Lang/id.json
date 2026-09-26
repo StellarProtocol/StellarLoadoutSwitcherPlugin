@@ -23,12 +23,17 @@
   "loadout.dsbindings.bound": "Deep-Slumber diikat ke {0}",
   "loadout.dsbindings.bindFailed": "Gagal menangkap — coba lagi sebentar",
   "loadout.dsbindings.help": "Ikat setup Deep-Slumber — jalur kultivasi dan faktornya — ke setiap loadout. Dengan Terapkan otomatis aktif, plugin menerapkan ulang setup itu setiap kali kamu beralih ke loadout tersebut. \"Ikat yang sekarang\" menyimpan Deep-Slumber yang sedang kamu pakai ke loadout aktif. Tekan hotkey loadout yang sedang dipakai untuk menerapkan ulang setup-nya.",
-  "loadout.copy.button": "← {0}",
   "loadout.copy.confirm": "Timpa dengan {0}?",
-  "loadout.copy.hintUnsaved": "⚠ termasuk perubahan yang belum disimpan",
+  "loadout.copy.hintUnsaved": "⚠ ada perubahan belum disimpan",
   "loadout.copy.hintClass": "⚠ mengubah {0} menjadi {1}",
   "loadout.copy.toastCopied": "{0} → {1} disalin",
   "loadout.copy.toastParts": "gear · modul · skill · talent · Battle Imagine · ikatan Deep-Slumber",
   "loadout.copy.toastRefused": "Gagal menyalin ke {0} — tidak ada yang diubah",
-  "loadout.copy.help": "\"← <loadout>\" menyalin loadout yang sedang kamu pakai (namanya tertulis di tombol) ke baris itu — gear, modul, skill, talent, Battle Imagine, dan ikatan Deep-Slumber-nya."
+  "loadout.copy.help": "\"{0} <loadout>\" menyalin loadout yang sedang kamu pakai (namanya tertulis di tombol) ke baris itu — gear, modul, skill, talent, Battle Imagine, dan ikatan Deep-Slumber-nya.",
+  "loadout.copy.reasonBusy": "penggantian loadout masih berjalan",
+  "loadout.copy.reasonNotReady": "data loadout belum siap",
+  "loadout.copy.reasonNoSuch": "loadout itu sudah tidak ada",
+  "loadout.copy.reasonTimeout": "game tidak merespons tepat waktu",
+  "loadout.copy.reasonCancelled": "penyalinan dibatalkan",
+  "loadout.copy.reasonRefused": "game menolaknya (lihat pesannya)"
 }
