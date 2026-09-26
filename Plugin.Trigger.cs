@@ -105,6 +105,9 @@ public sealed partial class Plugin
         _pendingIsReapply = true;
         _pendingDeadline = _tick + SettleTimeoutTicks;
         DiagReapplyArmed(id);
+        // Nothing settles on a same-loadout press (no RPC, no LiveStateChanged), so try now instead of
+        // idling out the settle deadline; a busy latch re-arms and retries on its own.
+        TryApplyPending();
     }
 
     // IFramework.Update ticks every game frame with deltaTime; only the frame COUNT drives the

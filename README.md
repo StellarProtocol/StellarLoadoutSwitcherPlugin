@@ -11,6 +11,11 @@ dotnet build -c Release
 
 Requires framework **>= 1.2.0** (adds `ILoadout` + `INotifications`).
 
+## Re-applying a setup
+
+Pressing the hotkey of the loadout you already have equipped re-applies its bound Deep-Slumber setup
+(useful when an apply didn't take).
+
 ## Where your Deep-Slumber bindings are stored
 
 A Deep-Slumber binding is **user data** — you captured it with "Bind current" — so from **2.4.0** it
@@ -19,8 +24,6 @@ stellar.loadoutswitcher.data/bindings.json` (the framework's `IPluginDataStore`)
 JSON document. The shared `stellar/plugins/stellar.loadoutswitcher.config.json` keeps **settings**
 only — here just the `autoApply` toggle. Writes to the data store are synchronous and atomic
 (temp file + rename) and land outside both the config file watcher and the plugin-DLL scan path.
-Pressing the hotkey of the loadout you already have equipped re-applies its bound Deep-Slumber setup
-(useful when an apply didn't take).
 
 Bindings saved by 2.3.0 or earlier are **migrated automatically**, and the plugin logs one line:
 
