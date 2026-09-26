@@ -11,6 +11,11 @@ dotnet build -c Release
 
 Requires framework **>= 1.2.0** (adds `ILoadout` + `INotifications`).
 
+## Re-applying a setup
+
+Pressing the hotkey of the loadout you already have equipped re-applies its bound Deep-Slumber setup
+(useful when an apply didn't take).
+
 ## Where your Deep-Slumber bindings are stored
 
 A Deep-Slumber binding is **user data** — you captured it with "Bind current" — so from **2.4.0** it

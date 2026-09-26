@@ -41,6 +41,13 @@ public sealed partial class Plugin
         _services.Log.Info($"[LoadoutSwitcher] armed pending DS apply for loadout {loadoutId}");
     }
 
+    /// <summary>Logged when a same-loadout hotkey press arms a Deep-Slumber re-apply.</summary>
+    private void DiagReapplyArmed(int loadoutId)
+    {
+        if (!StellarDiagnostics.IsEnabled) return;
+        _services.Log.Info($"[LoadoutSwitcher] armed DS RE-apply for current loadout {loadoutId}");
+    }
+
     /// <summary>Logged when a pending Deep-Slumber apply is skipped (e.g. class guard failed).</summary>
     private void DiagSkippedApply(int loadoutId, string reason)
     {

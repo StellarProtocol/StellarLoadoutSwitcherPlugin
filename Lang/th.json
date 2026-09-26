@@ -9,6 +9,7 @@
   "ds.toast.partial": "ใช้ Deep-Slumber ได้เพียงบางส่วน",
   "ds.toast.refused": "การเปลี่ยน Deep-Slumber ถูกปฏิเสธ",
   "ds.toast.unavailable": "Deep-Slumber ยังไม่พร้อมใช้งาน",
+  "ds.toast.alreadyApplied": "ใช้ชุด Deep-Slumber อยู่แล้ว",
   "loadout.dsbindings.title": "Loadout Switcher",
   "loadout.dsbindings.autoApply": "ใช้อัตโนมัติเมื่อสลับ",
   "loadout.dsbindings.colName": "โหลดเอาต์",
@@ -21,5 +22,5 @@
   "loadout.dsbindings.empty": "ยังไม่มีโหลดเอาต์ที่บันทึกไว้",
   "loadout.dsbindings.bound": "ผูก Deep-Slumber กับ {0} แล้ว",
   "loadout.dsbindings.bindFailed": "บันทึกไม่สำเร็จ — โปรดลองอีกครั้งในอีกสักครู่",
-  "loadout.dsbindings.help": "ผูกชุด Deep-Slumber (สายบ่มเพาะและปัจจัยของมัน) เข้ากับแต่ละโหลดเอาต์ เมื่อเปิด \"ใช้อัตโนมัติ\" ปลั๊กอินจะใช้ชุดนั้นซ้ำทุกครั้งที่คุณสลับไปยังโหลดเอาต์นั้น \"ผูกชุดปัจจุบัน\" จะบันทึก Deep-Slumber ที่คุณใช้อยู่ตอนนี้ไว้กับโหลดเอาต์ที่ใช้งานอยู่"
+  "loadout.dsbindings.help": "ผูกชุด Deep-Slumber (สายบ่มเพาะและปัจจัยของมัน) เข้ากับแต่ละโหลดเอาต์ เมื่อเปิด \"ใช้อัตโนมัติ\" ปลั๊กอินจะใช้ชุดนั้นซ้ำทุกครั้งที่คุณสลับไปยังโหลดเอาต์นั้น \"ผูกชุดปัจจุบัน\" จะบันทึก Deep-Slumber ที่คุณใช้อยู่ตอนนี้ไว้กับโหลดเอาต์ที่ใช้งานอยู่ กดปุ่มลัดของโหลดเอาต์ที่ใช้อยู่เพื่อใช้ชุดนั้นอีกครั้ง"
 }

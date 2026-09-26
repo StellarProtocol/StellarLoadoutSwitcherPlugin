@@ -102,15 +102,20 @@ public sealed partial class Plugin : IStellarPlugin
 
         var slot = slots[slotNumber - 1];
         DiagApplying(slotNumber, slot);
-        _ = ApplyAndReportAsync(slot);
+        _ = ApplyAndReportAsync(slot, _services.Loadout.CurrentIndex);
     }
 
-    private async Task ApplyAndReportAsync(LoadoutSlot slot)
+    private async Task ApplyAndReportAsync(LoadoutSlot slot, int? currentBefore)
     {
         try
         {
             var result = await _services.Loadout.ApplyAsync(slot.Index).ConfigureAwait(false);
             Report(slot, result);
+            // Same-loadout press: the index never changes, so OnLoadoutsChanged won't arm the DS apply.
+            // Hand it to the trigger explicitly (Toir 2026-09-25 — re-attempt a failed psychoscope apply).
+            if (result == LoadoutResult.Success
+                && TriggerEdge.IsReapply(slot.Index, currentBefore, _services.Loadout.CurrentIndex))
+                RequestReapply(slot.Index);
         }
         catch (Exception ex)
         {

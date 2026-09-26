@@ -29,6 +29,9 @@ public sealed partial class Plugin
     private long _pendingDeadline;
     private int _applying;                       // 1 while our own apply runs (ignore its LiveStateChanged)
     private const long SettleTimeoutTicks = 120;  // ~2 s fallback (60 fps) if LiveStateChanged never fires
+    private int _reapplyRequest = NoReapply;     // loadout id posted by the hotkey continuation (any thread)
+    private const int NoReapply = int.MinValue;
+    private bool _pendingIsReapply;              // the armed apply came from a same-loadout hotkey press
 
     private void InitTrigger()
     {
@@ -72,6 +75,7 @@ public sealed partial class Plugin
         if (_services.PlayerState.CharId == 0) { DiagSkippedApply(idx.Value, "char unresolved"); return; }
         if (GetBinding(idx.Value) is null) return;
         _pendingIndex = idx;
+        _pendingIsReapply = false;
         _pendingDeadline = _tick + SettleTimeoutTicks;
         DiagArmed(idx.Value);
     }
@@ -82,11 +86,36 @@ public sealed partial class Plugin
         if (_pendingIndex is not null) TryApplyPending();
     }
 
+    // Called from the hotkey continuation, which may resume off the main thread (ConfigureAwait(false)):
+    // post only an int; OnUpdate (main thread) consumes it and arms, so _pendingIndex is main-thread-only.
+    private void RequestReapply(int loadoutId) => Interlocked.Exchange(ref _reapplyRequest, loadoutId);
+
+    private void ConsumeReapplyRequest()
+    {
+        var id = Interlocked.Exchange(ref _reapplyRequest, NoReapply);
+        if (id == NoReapply) return;
+        // A real switch always supersedes a re-apply: never clobber a pending switch arm, and drop a
+        // request whose loadout is no longer the current one (the selection moved since the press).
+        if (_pendingIndex is not null && !_pendingIsReapply) { DiagSkippedApply(id, "re-apply: real switch pending"); return; }
+        if (_services.Loadout.CurrentIndex != id) { DiagSkippedApply(id, "re-apply: selection moved"); return; }
+        if (!AutoApply) { DiagSkippedApply(id, "re-apply: auto-apply off"); return; }
+        if (_services.PlayerState.CharId == 0) { DiagSkippedApply(id, "re-apply: char unresolved"); return; }
+        if (GetBinding(id) is null) { DiagSkippedApply(id, "re-apply: no binding"); return; }
+        _pendingIndex = id;
+        _pendingIsReapply = true;
+        _pendingDeadline = _tick + SettleTimeoutTicks;
+        DiagReapplyArmed(id);
+        // Nothing settles on a same-loadout press (no RPC, no LiveStateChanged), so try now instead of
+        // idling out the settle deadline; a busy latch re-arms and retries on its own.
+        TryApplyPending();
+    }
+
     // IFramework.Update ticks every game frame with deltaTime; only the frame COUNT drives the
     // settle-timeout fallback here, so deltaTime itself is unused.
     private void OnUpdate(float deltaTime)
     {
         _tick++;
+        ConsumeReapplyRequest();
         if (_pendingIndex is not null && _tick >= _pendingDeadline) TryApplyPending();
     }
 
@@ -95,7 +124,7 @@ public sealed partial class Plugin
         var idx = _pendingIndex;
         if (idx is null) return;
         var setup = GetBinding(idx.Value);
-        if (setup is null) { _pendingIndex = null; return; }
+        if (setup is null) { _pendingIndex = null; _pendingIsReapply = false; return; }
 
         var liveProf = _services.Loadout.LiveState?.ProfessionId;
         var settled = liveProf == setup.ProfessionId;
@@ -103,6 +132,7 @@ public sealed partial class Plugin
         if (!settled)                                              // deadline hit with wrong/again class → drop + log
         {
             _pendingIndex = null;
+            _pendingIsReapply = false;
             DiagSkippedApply(idx.Value, $"class {liveProf} != binding class {setup.ProfessionId}");
             return;
         }
@@ -112,16 +142,18 @@ public sealed partial class Plugin
             _pendingDeadline = _tick + SettleTimeoutTicks;        // a DS apply is already running → retry next tick
             return;                                               // keep _pendingIndex armed, do NOT drop
         }
+        var reapply = _pendingIsReapply;
         _pendingIndex = null;                                     // committed
-        _ = ApplyDeepSlumberAsync(setup);
+        _pendingIsReapply = false;
+        _ = ApplyDeepSlumberAsync(setup, reapply);
     }
 
-    private async Task ApplyDeepSlumberAsync(DeepSlumberSetup setup)
+    private async Task ApplyDeepSlumberAsync(DeepSlumberSetup setup, bool reapply)
     {
         try
         {
             var result = await _services.DeepSlumber.ApplySetupAsync(setup).ConfigureAwait(false);
-            ReportDeepSlumber(setup, result);
+            ReportDeepSlumber(setup, result, reapply);
         }
         catch (Exception ex) { _services.Log.Warning($"[LoadoutSwitcher] DS apply threw: {ex.Message}"); }
         finally
@@ -131,7 +163,7 @@ public sealed partial class Plugin
         }
     }
 
-    private void ReportDeepSlumber(DeepSlumberSetup setup, DeepSlumberApplyResult result)
+    private void ReportDeepSlumber(DeepSlumberSetup setup, DeepSlumberApplyResult result, bool reapply)
     {
         // AlreadyMatched/Cancelled: silent. Success: green. Partial/Refused/Unavailable: red (the
         // game also toasts the specific per-op reason itself). Loc keys land with the Task 8 overlay;
@@ -143,13 +175,15 @@ public sealed partial class Plugin
         var anchors = setup.Areas.Any(a => a.NormalNodes is not null)
             ? setup.Areas.Sum(a => a.NormalNodes?.Count ?? 0).ToString()
             : "legacy";
-        _services.Log.Info($"[LoadoutSwitcher] DS apply -> {result} (areas={setup.Areas.Count} factors={factors} anchors={anchors})");
+        _services.Log.Info($"[LoadoutSwitcher] DS apply -> {result} (areas={setup.Areas.Count} factors={factors} anchors={anchors}) reapply={reapply}");
         var (type, key) = result switch
         {
             DeepSlumberApplyResult.Success        => (NoticeTipType.GreenBar, "ds.toast.applied"),
             DeepSlumberApplyResult.PartialFailure => (NoticeTipType.RedBar,   "ds.toast.partial"),
             DeepSlumberApplyResult.Refused        => (NoticeTipType.RedBar,   "ds.toast.refused"),
             DeepSlumberApplyResult.Unavailable    => (NoticeTipType.RedBar,   "ds.toast.unavailable"),
+            DeepSlumberApplyResult.AlreadyMatched when reapply
+                                                   => (NoticeTipType.GreenBar, "ds.toast.alreadyApplied"),
             _                                      => (NoticeTipType.GreenBar, ""), // AlreadyMatched/Cancelled: silent
         };
         if (key.Length > 0)

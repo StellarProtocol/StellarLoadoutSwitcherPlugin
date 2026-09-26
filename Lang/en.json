@@ -9,6 +9,7 @@
   "ds.toast.partial": "Deep-Slumber partly applied",
   "ds.toast.refused": "Deep-Slumber change refused",
   "ds.toast.unavailable": "Deep-Slumber not available yet",
+  "ds.toast.alreadyApplied": "Deep-Slumber setup already applied",
   "loadout.dsbindings.title": "Loadout Switcher",
   "loadout.dsbindings.autoApply": "Auto-apply on switch",
   "loadout.dsbindings.colName": "Loadout",
@@ -21,5 +22,5 @@
   "loadout.dsbindings.empty": "No saved loadouts yet.",
   "loadout.dsbindings.bound": "Bound Deep-Slumber to {0}",
   "loadout.dsbindings.bindFailed": "Couldn't capture — try again in a moment",
-  "loadout.dsbindings.help": "Bind a Deep-Slumber setup — its cultivate line and phantom factors — to each loadout. With Auto-apply on, the plugin re-applies that setup whenever you switch to the loadout. \"Bind current\" saves the Deep-Slumber you're using right now onto your active loadout."
+  "loadout.dsbindings.help": "Bind a Deep-Slumber setup — its cultivate line and phantom factors — to each loadout. With Auto-apply on, the plugin re-applies that setup whenever you switch to the loadout. \"Bind current\" saves the Deep-Slumber you're using right now onto your active loadout. Press the hotkey of the loadout you're already on to re-apply its setup."
 }
