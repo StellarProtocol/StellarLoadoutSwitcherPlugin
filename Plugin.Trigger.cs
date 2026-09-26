@@ -94,6 +94,10 @@ public sealed partial class Plugin
     {
         var id = Interlocked.Exchange(ref _reapplyRequest, NoReapply);
         if (id == NoReapply) return;
+        // A real switch always supersedes a re-apply: never clobber a pending switch arm, and drop a
+        // request whose loadout is no longer the current one (the selection moved since the press).
+        if (_pendingIndex is not null && !_pendingIsReapply) { DiagSkippedApply(id, "re-apply: real switch pending"); return; }
+        if (_services.Loadout.CurrentIndex != id) { DiagSkippedApply(id, "re-apply: selection moved"); return; }
         if (!AutoApply) { DiagSkippedApply(id, "re-apply: auto-apply off"); return; }
         if (_services.PlayerState.CharId == 0) { DiagSkippedApply(id, "re-apply: char unresolved"); return; }
         if (GetBinding(id) is null) { DiagSkippedApply(id, "re-apply: no binding"); return; }
