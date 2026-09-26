@@ -182,6 +182,26 @@ public sealed partial class Plugin
             .ToList();
     }
 
+    /// <summary>Applies a copy's binding decision (<see cref="CopyRules.DecideMirror"/>) to the target under
+    /// the CURRENT character: <see cref="BindingMirror.CopySource"/> makes the target's binding an exact,
+    /// independent copy of the source's; <see cref="BindingMirror.ClearTarget"/> removes the target's.
+    /// No-ops when the character is unresolved or the decision is <see cref="BindingMirror.Untouched"/>.</summary>
+    internal void MirrorBinding(int sourceId, int targetId, BindingMirror mirror)
+    {
+        if (mirror == BindingMirror.Untouched) return;
+        MigrateLegacyBindings();
+        var cur = CurrentBindings();
+        if (cur is null)
+        {
+            DiagBindAborted(targetId, "char unresolved (copy mirror)");
+            return;
+        }
+
+        CopyRules.ApplyMirror(cur, sourceId, targetId, mirror);
+        _doc.MarkMigrated(targetId);   // the frozen legacy key can never resurrect an overwritten binding
+        PersistBindings();
+    }
+
     private void PersistBindings()
     {
         MirrorCurrentToLegacy();

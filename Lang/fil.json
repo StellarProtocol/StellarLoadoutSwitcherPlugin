@@ -22,5 +22,13 @@
   "loadout.dsbindings.empty": "Wala pang naka-save na loadout.",
   "loadout.dsbindings.bound": "Na-bind ang Deep-Slumber sa {0}",
   "loadout.dsbindings.bindFailed": "Hindi ma-capture — subukan ulit mamaya",
-  "loadout.dsbindings.help": "I-bind ang isang Deep-Slumber setup — ang cultivate line at phantom factors nito — sa bawat loadout. Kapag naka-on ang Auto-apply, ire-re-apply ng plugin ang setup na iyon tuwing lilipat ka sa loadout na iyon. Ang \"Bind current\" ay nagse-save ng Deep-Slumber na ginagamit mo ngayon sa iyong active na loadout. Pindutin ang hotkey ng loadout na gamit mo para i-apply muli ang setup nito."
+  "loadout.dsbindings.help": "I-bind ang isang Deep-Slumber setup — ang cultivate line at phantom factors nito — sa bawat loadout. Kapag naka-on ang Auto-apply, ire-re-apply ng plugin ang setup na iyon tuwing lilipat ka sa loadout na iyon. Ang \"Bind current\" ay nagse-save ng Deep-Slumber na ginagamit mo ngayon sa iyong active na loadout. Pindutin ang hotkey ng loadout na gamit mo para i-apply muli ang setup nito.",
+  "loadout.copy.button": "← {0}",
+  "loadout.copy.confirm": "I-overwrite gamit ang {0}?",
+  "loadout.copy.hintUnsaved": "⚠ kasama ang mga pagbabagong hindi pa naka-save",
+  "loadout.copy.hintClass": "⚠ gagawing {1} ang {0}",
+  "loadout.copy.toastCopied": "Nakopya ang {0} → {1}",
+  "loadout.copy.toastParts": "gear · modules · skills · talents · Battle Imagines · Deep-Slumber binding",
+  "loadout.copy.toastRefused": "Hindi makopya sa {0} — walang nabago",
+  "loadout.copy.help": "Kinokopya ng \"← <loadout>\" ang loadout na suot mo ngayon (nakasulat sa button) papunta sa row na iyon — gear, modules, skills, talents, Battle Imagines at ang Deep-Slumber binding nito."
 }

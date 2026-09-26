@@ -57,14 +57,14 @@ public sealed partial class Plugin
                                      && (_services.ClientState.UiState & GameUIState.Loading) == 0,
             },
             BuildDsRoot(),
-            OnClose: () => _dsWindow.SetVisiblePersist(false)));
+            OnClose: () => { CancelCopy(); _dsWindow.SetVisiblePersist(false); }));
 
         _dsToggle = _services.Hotkeys.DeclareAction(
             new HotkeyAction(
                 Id:               "loadout.window.toggle",
                 Description:      _loc.T("loadout.hotkey.windowToggle"),
                 SuggestedDefault: null),
-            callback: () => _dsWindow.SetVisiblePersist(!_dsWindow.IsShown));
+            callback: ToggleDsWindow);
 
         // Launcher-rail tile so the window is discoverable (not hotkey-only) — the hotkey has no
         // default binding, so without this the overlay is invisible to a new user. TitleProvider makes
@@ -72,24 +72,37 @@ public sealed partial class Plugin
         // the stable pinned-state identity.
         _dsLauncherEntry = _services.Launcher.Register(new LauncherEntry(
             _loc.T("loadout.dsbindings.title"), IconPng: LoadLauncherIcon(), IconKey: null,
-            OnOpen: () => _dsWindow.SetVisiblePersist(!_dsWindow.IsShown))
+            OnOpen: ToggleDsWindow)
         {
             ShouldShow = () => _services.ClientState.Phase == GamePhase.World,
             TitleProvider = () => _loc.T("loadout.dsbindings.title"),
         });
 
         _services.Loadout.LoadoutsChanged += OnDsLoadoutsChanged;
+        _services.ClientState.Logout += OnCopyLogout;
+    }
+
+    // Hotkey + launcher tile: hiding the window cancels an open copy confirm (spec § 2.3).
+    private void ToggleDsWindow()
+    {
+        if (_dsWindow.IsShown) CancelCopy();
+        _dsWindow.SetVisiblePersist(!_dsWindow.IsShown);
     }
 
     private void DisposeOverlay()
     {
         _services.Loadout.LoadoutsChanged -= OnDsLoadoutsChanged;
+        _services.ClientState.Logout -= OnCopyLogout;
         try { _dsLauncherEntry?.Dispose(); } catch { /* disposal must not throw */ }
         try { _dsToggle?.Dispose(); } catch { /* disposal must not throw */ }
         try { _dsWindow?.Remove(); } catch { /* disposal must not throw */ }
     }
 
-    private void OnDsLoadoutsChanged() => RefreshDsRows();
+    private void OnDsLoadoutsChanged()
+    {
+        RefreshDsRows();
+        CancelCopyIfStale();   // a switch changes the worn loadout → an armed copy no longer means the same thing
+    }
 
     // The launcher-rail tile icon (embedded swap-arrows PNG). Null → the launcher's default glyph.
     private static byte[]? LoadLauncherIcon()
@@ -166,7 +179,7 @@ public sealed partial class Plugin
             var idx = i;   // capture per row
 
             var nameCell = new CellElement(
-                new TextElement(() => DsRowAt(idx)?.Name ?? "", NoWrap: true), Width: 130f);
+                new TextElement(() => DsRowName(idx), NoWrap: true), Width: 130f);
 
             var statusCell = new CellElement(
                 new TextElement(() => DsStatusText(idx),
@@ -175,24 +188,42 @@ public sealed partial class Plugin
                         : (ColorRgba?)_services.Theme.Colors.MenuMuted,
                     NoWrap: true), Width: 140f);
 
-            // Present ONLY on the currently-active row; a same-width spacer on every other row keeps the
-            // Clear column's x-position identical across rows (Then/Else are both built once, toggled).
-            var bindCell = new ConditionalElement(
-                () => DsRowAt(idx)?.IsCurrent == true,
-                Then: new CellElement(new ButtonElement(
-                    () => _loc.T("loadout.dsbindings.bindCurrent"),
-                    () => OnDsBindCurrent(DsRowAt(idx)), Width: 96f), Width: 100f),
-                Else: new CellElement(new SpacerElement(), Width: 100f));
+            var bindCell = BuildBindOrCopyCell(idx);
 
             var clearCell = new CellElement(new ButtonElement(
                 () => _loc.T("loadout.dsbindings.clear"),
                 () => OnDsClear(DsRowAt(idx)),
-                Enabled: () => DsIsBound(idx), Width: 56f), Width: 60f);
+                Enabled: () => DsIsBound(idx) && !CopyFreezesRows(), Width: 56f), Width: 60f);
 
-            var row = new RowElement(new HudElement[] { nameCell, statusCell, bindCell, clearCell }, Gap: 6f);
+            // Binding + both action cells (140+6+100+6+60 = 312 px) swap for the inline copy confirm bar.
+            var actions = new CellElement(new ConditionalElement(
+                () => IsCopyConfirming(idx),
+                Then: BuildCopyConfirmBar(idx),
+                Else: new RowElement(new HudElement[] { statusCell, bindCell, clearCell }, Gap: 6f)), Width: 312f);
+
+            var row = new RowElement(new HudElement[] { nameCell, actions }, Gap: 6f);
             pool[idx] = new SelectableElement(row, OnClick: () => { }, Selected: () => DsRowAt(idx)?.IsCurrent == true);
         }
         return pool;
+    }
+
+    // Third cell: "Bind current" on the worn row, "← <worn>" (copy into this row) on every other row.
+    private HudElement BuildBindOrCopyCell(int idx)
+    {
+        // "Bind current" is present ONLY on the currently-active row; every branch is the same 100 px cell so
+        // the Clear column's x-position stays identical across rows (Then/Else are both built once, toggled).
+        return new ConditionalElement(
+            () => DsRowAt(idx)?.IsCurrent == true,
+            Then: new CellElement(new ButtonElement(
+                () => _loc.T("loadout.dsbindings.bindCurrent"),
+                () => OnDsBindCurrent(DsRowAt(idx)), Enabled: () => !CopyFreezesRows(), Width: 96f), Width: 100f),
+            // Every OTHER row: "← <worn>" copies the worn loadout into this row (spec § 2.1). Same 100px
+            // cell; a long worn name is cut with "…" (CopyButtonText) — the confirm bar shows it in full.
+            Else: new CellElement(new ConditionalElement(
+                () => CopyButtonShown(idx),
+                Then: new ButtonElement(CopyButtonText, () => ArmCopy(idx),
+                    Enabled: () => CurrentCopyGate().ButtonEnabled, Width: 96f),
+                Else: new SpacerElement()), Width: 100f));
     }
 
     private HudElement BuildDsRoot()
@@ -212,9 +243,11 @@ public sealed partial class Plugin
         // Muted intro paragraph (wraps to the window width — Width 0 + default NoWrap=false) explaining
         // what a binding is, what Auto-apply does, and what "Bind current" captures. Deep-Slumber is
         // named explicitly so the window is self-describing.
-        var helpText = new TextElement(
-            () => _loc.T("loadout.dsbindings.help"),
-            () => (ColorRgba?)_services.Theme.Colors.MenuMuted);
+        var helpText = new ColumnElement(new HudElement[]
+        {
+            new TextElement(() => _loc.T("loadout.dsbindings.help"), () => (ColorRgba?)_services.Theme.Colors.MenuMuted),
+            new TextElement(() => _loc.T("loadout.copy.help"), () => (ColorRgba?)_services.Theme.Colors.MenuMuted),
+        }, Gap: 4f);
 
         var toggleRow = new RowElement(new HudElement[]
         {

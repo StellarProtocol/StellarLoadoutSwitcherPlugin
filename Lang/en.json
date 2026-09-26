@@ -22,5 +22,13 @@
   "loadout.dsbindings.empty": "No saved loadouts yet.",
   "loadout.dsbindings.bound": "Bound Deep-Slumber to {0}",
   "loadout.dsbindings.bindFailed": "Couldn't capture — try again in a moment",
-  "loadout.dsbindings.help": "Bind a Deep-Slumber setup — its cultivate line and phantom factors — to each loadout. With Auto-apply on, the plugin re-applies that setup whenever you switch to the loadout. \"Bind current\" saves the Deep-Slumber you're using right now onto your active loadout. Press the hotkey of the loadout you're already on to re-apply its setup."
+  "loadout.dsbindings.help": "Bind a Deep-Slumber setup — its cultivate line and phantom factors — to each loadout. With Auto-apply on, the plugin re-applies that setup whenever you switch to the loadout. \"Bind current\" saves the Deep-Slumber you're using right now onto your active loadout. Press the hotkey of the loadout you're already on to re-apply its setup.",
+  "loadout.copy.button": "← {0}",
+  "loadout.copy.confirm": "Overwrite with {0}?",
+  "loadout.copy.hintUnsaved": "⚠ includes unsaved changes",
+  "loadout.copy.hintClass": "⚠ changes {0} to {1}",
+  "loadout.copy.toastCopied": "Copied {0} → {1}",
+  "loadout.copy.toastParts": "gear · modules · skills · talents · Battle Imagines · Deep-Slumber binding",
+  "loadout.copy.toastRefused": "Couldn't copy to {0} — nothing was changed",
+  "loadout.copy.help": "\"← <loadout>\" copies the loadout you're wearing (named on the button) into that row — gear, modules, skills, talents, Battle Imagines and its Deep-Slumber binding."
 }
