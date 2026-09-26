@@ -24,5 +24,7 @@
     <Compile Include="../BindingPersistence.cs" />
     <!-- Pure BCL edge classifier for the auto-apply trigger (no game/framework deps). -->
     <Compile Include="../TriggerEdge.cs" />
+    <!-- Pure loadout-copy decisions (button/hints/confirm validity/binding mirror). -->
+    <Compile Include="../CopyRules.cs" />
   </ItemGroup>
 </Project>

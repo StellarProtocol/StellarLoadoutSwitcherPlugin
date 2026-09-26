@@ -116,6 +116,7 @@ public sealed partial class Plugin
     {
         _tick++;
         ConsumeReapplyRequest();
+        ConsumeCopyOutcome();   // a finished loadout copy (Plugin.Copy.cs) — main-thread bindings + toasts
         if (_pendingIndex is not null && _tick >= _pendingDeadline) TryApplyPending();
     }
 

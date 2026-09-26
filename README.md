@@ -16,6 +16,20 @@ Requires framework **>= 1.2.0** (adds `ILoadout` + `INotifications`).
 Pressing the hotkey of the loadout you already have equipped re-applies its bound Deep-Slumber setup
 (useful when an apply didn't take).
 
+## Copying a loadout (2.8.0, needs framework >= 2.10.0)
+
+Every row except the one you're wearing has a **`← <worn loadout>`** button. It copies the loadout you
+are wearing right now — including edits you haven't saved — into that row: gear, modules, skills,
+talents and Battle Imagines (through the game's own Save), plus the worn loadout's Deep-Slumber binding
+(if the worn loadout has none, the row's binding is cleared). The row keeps its name and you stay on
+your current loadout. A confirm bar asks first and warns when the copy includes unsaved changes or
+changes the row's class. Each attempt logs one line:
+
+```
+[LoadoutSwitcher] copy 4→3 ok
+[LoadoutSwitcher] copy 4→3 refused(Rejected)
+```
+
 ## Where your Deep-Slumber bindings are stored
 
 A Deep-Slumber binding is **user data** — you captured it with "Bind current" — so from **2.4.0** it

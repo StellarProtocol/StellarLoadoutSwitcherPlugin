@@ -22,5 +22,18 @@
   "loadout.dsbindings.empty": "保存されたロードアウトがまだありません。",
   "loadout.dsbindings.bound": "Deep-Slumberを{0}にバインドしました",
   "loadout.dsbindings.bindFailed": "取得できませんでした。少し待ってから再試行してください",
-  "loadout.dsbindings.help": "Deep-Slumberの設定（育成ラインと要素）を各ロードアウトにバインドします。自動適用をオンにすると、そのロードアウトに切り替えるたびにプラグインが設定を再適用します。「現在の設定をバインド」で、今使っているDeep-Slumberをアクティブなロードアウトに保存します。使用中のロードアウトのホットキーを押すと、その設定を再適用します。"
+  "loadout.dsbindings.help": "Deep-Slumberの設定（育成ラインと要素）を各ロードアウトにバインドします。自動適用をオンにすると、そのロードアウトに切り替えるたびにプラグインが設定を再適用します。「現在の設定をバインド」で、今使っているDeep-Slumberをアクティブなロードアウトに保存します。使用中のロードアウトのホットキーを押すと、その設定を再適用します。",
+  "loadout.copy.confirm": "{0}で上書きしますか？",
+  "loadout.copy.hintUnsaved": "⚠ 未保存の変更を含みます",
+  "loadout.copy.hintClass": "⚠ {0}が{1}に変わります",
+  "loadout.copy.toastCopied": "{0} → {1} にコピーしました",
+  "loadout.copy.toastParts": "装備 · モジュール · スキル · 天賦 · バトルイマジン · Deep-Slumberのバインド",
+  "loadout.copy.toastRefused": "{0}にコピーできませんでした — 何も変更されていません",
+  "loadout.copy.help": "「{0} ロードアウト名」は、今装備しているロードアウト（ボタンに表示）をその行にコピーします — 装備、モジュール、スキル、天賦、バトルイマジン、そしてDeep-Slumberのバインドも含みます。",
+  "loadout.copy.reasonBusy": "ロードアウトの切り替えがまだ進行中です",
+  "loadout.copy.reasonNotReady": "ロードアウトのデータがまだ準備できていません",
+  "loadout.copy.reasonNoSuch": "そのロードアウトはもう存在しません",
+  "loadout.copy.reasonTimeout": "ゲームが時間内に応答しませんでした",
+  "loadout.copy.reasonCancelled": "コピーはキャンセルされました",
+  "loadout.copy.reasonRefused": "ゲームに拒否されました（ゲームのメッセージを確認）"
 }
