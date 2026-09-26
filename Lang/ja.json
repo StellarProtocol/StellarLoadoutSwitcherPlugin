@@ -9,6 +9,7 @@
   "ds.toast.partial": "Deep-Slumberを一部のみ適用しました",
   "ds.toast.refused": "Deep-Slumberの変更が拒否されました",
   "ds.toast.unavailable": "Deep-Slumberはまだ利用できません",
+  "ds.toast.alreadyApplied": "Deep-Slumberの設定は適用済みです",
   "loadout.dsbindings.title": "ロードアウトスイッチャー",
   "loadout.dsbindings.autoApply": "切り替え時に自動適用",
   "loadout.dsbindings.colName": "ロードアウト",
@@ -21,5 +22,5 @@
   "loadout.dsbindings.empty": "保存されたロードアウトがまだありません。",
   "loadout.dsbindings.bound": "Deep-Slumberを{0}にバインドしました",
   "loadout.dsbindings.bindFailed": "取得できませんでした。少し待ってから再試行してください",
-  "loadout.dsbindings.help": "Deep-Slumberの設定（育成ラインと要素）を各ロードアウトにバインドします。自動適用をオンにすると、そのロードアウトに切り替えるたびにプラグインが設定を再適用します。「現在の設定をバインド」で、今使っているDeep-Slumberをアクティブなロードアウトに保存します。"
+  "loadout.dsbindings.help": "Deep-Slumberの設定（育成ラインと要素）を各ロードアウトにバインドします。自動適用をオンにすると、そのロードアウトに切り替えるたびにプラグインが設定を再適用します。「現在の設定をバインド」で、今使っているDeep-Slumberをアクティブなロードアウトに保存します。使用中のロードアウトのホットキーを押すと、その設定を再適用します。"
 }

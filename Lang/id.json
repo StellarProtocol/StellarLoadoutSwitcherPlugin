@@ -9,6 +9,7 @@
   "ds.toast.partial": "Deep-Slumber diterapkan sebagian",
   "ds.toast.refused": "Perubahan Deep-Slumber ditolak",
   "ds.toast.unavailable": "Deep-Slumber belum tersedia",
+  "ds.toast.alreadyApplied": "Setup Deep-Slumber sudah diterapkan",
   "loadout.dsbindings.title": "Loadout Switcher",
   "loadout.dsbindings.autoApply": "Terapkan otomatis saat beralih",
   "loadout.dsbindings.colName": "Loadout",
@@ -21,5 +22,5 @@
   "loadout.dsbindings.empty": "Belum ada loadout tersimpan.",
   "loadout.dsbindings.bound": "Deep-Slumber diikat ke {0}",
   "loadout.dsbindings.bindFailed": "Gagal menangkap — coba lagi sebentar",
-  "loadout.dsbindings.help": "Ikat setup Deep-Slumber — jalur kultivasi dan faktornya — ke setiap loadout. Dengan Terapkan otomatis aktif, plugin menerapkan ulang setup itu setiap kali kamu beralih ke loadout tersebut. \"Ikat yang sekarang\" menyimpan Deep-Slumber yang sedang kamu pakai ke loadout aktif."
+  "loadout.dsbindings.help": "Ikat setup Deep-Slumber — jalur kultivasi dan faktornya — ke setiap loadout. Dengan Terapkan otomatis aktif, plugin menerapkan ulang setup itu setiap kali kamu beralih ke loadout tersebut. \"Ikat yang sekarang\" menyimpan Deep-Slumber yang sedang kamu pakai ke loadout aktif. Tekan hotkey loadout yang sedang dipakai untuk menerapkan ulang setup-nya."
 }
