@@ -19,7 +19,7 @@
          IPlayerIdentity.CharId (per-character bindings). -->
     <!-- Loadout copy (2.8.0): ILoadoutSave (IPluginServices.LoadoutSave) — framework 2.10.0. Built against the
          LOCAL dev pack 2.10.0-loadoutcopy-dev until framework 2.10.0 is released; then flip to 2.10.0. -->
-    <PackageReference Include="Stellar.Abstractions"       Version="2.10.0-loadoutcopy-dev" />
+    <PackageReference Include="Stellar.Abstractions"       Version="2.10.0" />
     <PackageReference Include="Stellar.PluginContracts"    Version="2.0.0" />
     <PackageReference Include="Stellar.Plugin.InteropRefs" Version="2.0.0" />
   </ItemGroup>
