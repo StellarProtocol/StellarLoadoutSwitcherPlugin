@@ -40,4 +40,35 @@ public sealed class TriggerEdgeTests
         Assert.False(TriggerEdge.IsLoadoutSwitch(prev: 3, idx: null));
         Assert.False(TriggerEdge.IsLoadoutSwitch(prev: null, idx: null));
     }
+
+    [Fact]
+    public void PressingTheAlreadyEquippedLoadout_IsAReapply()
+    {
+        // Toir 2026-09-25: the hotkey of the CURRENT loadout must re-attempt the Deep-Slumber apply.
+        Assert.True(TriggerEdge.IsReapply(pressedId: 3, currentBefore: 3, currentAfter: 3));
+    }
+
+    [Fact]
+    public void PressingADifferentLoadout_IsNotAReapply()
+    {
+        // A real switch is armed by OnLoadoutsChanged's edge — a reapply here would double-arm.
+        Assert.False(TriggerEdge.IsReapply(pressedId: 5, currentBefore: 3, currentAfter: 5));
+        Assert.False(TriggerEdge.IsReapply(pressedId: 5, currentBefore: 3, currentAfter: 3));
+    }
+
+    [Fact]
+    public void SelectionMovedDuringThePress_IsNotAReapply()
+    {
+        // Current moved away while the switch was in flight — not a same-loadout press anymore.
+        Assert.False(TriggerEdge.IsReapply(pressedId: 3, currentBefore: 3, currentAfter: 4));
+    }
+
+    [Fact]
+    public void UnresolvedSelection_IsNotAReapply()
+    {
+        // Login/char-select window: the index is unknown — never apply (2.5.1 no-apply-on-login rule).
+        Assert.False(TriggerEdge.IsReapply(pressedId: 3, currentBefore: null, currentAfter: 3));
+        Assert.False(TriggerEdge.IsReapply(pressedId: 3, currentBefore: 3, currentAfter: null));
+        Assert.False(TriggerEdge.IsReapply(pressedId: 3, currentBefore: null, currentAfter: null));
+    }
 }
