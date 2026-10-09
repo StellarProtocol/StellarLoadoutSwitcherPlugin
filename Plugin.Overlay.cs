@@ -70,8 +70,11 @@ public sealed partial class Plugin
         // default binding, so without this the overlay is invisible to a new user. TitleProvider makes
         // the tile re-localize LIVE on a language change (Title alone is a captured string); Title stays
         // the stable pinned-state identity.
+        // Title stays the fixed literal "Loadout Switcher" — the stable pin-identity key
+        // (ILauncher.cs:49-50) — so a pinned tile survives a language change; TitleProvider carries the
+        // live-localized display.
         _dsLauncherEntry = _services.Launcher.Register(new LauncherEntry(
-            _loc.T("loadout.dsbindings.title"), IconPng: LoadLauncherIcon(), IconKey: null,
+            "Loadout Switcher", IconPng: LoadLauncherIcon(), IconKey: null,
             OnOpen: ToggleDsWindow)
         {
             ShouldShow = () => _services.ClientState.Phase == GamePhase.World,
