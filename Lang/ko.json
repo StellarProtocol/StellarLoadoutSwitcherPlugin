@@ -10,7 +10,7 @@
   "ds.toast.refused": "Deep-Slumber 변경 거부됨",
   "ds.toast.unavailable": "Deep-Slumber 아직 사용할 수 없음",
   "ds.toast.alreadyApplied": "Deep-Slumber 구성 이미 적용됨",
-  "loadout.dsbindings.title": "Loadout Switcher",
+  "loadout.dsbindings.title": "로드아웃 스위처",
   "loadout.dsbindings.autoApply": "전환 시 자동 적용",
   "loadout.dsbindings.colName": "로드아웃",
   "loadout.dsbindings.colStatus": "바인딩",
