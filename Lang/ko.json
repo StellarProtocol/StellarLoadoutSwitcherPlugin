@@ -1,6 +1,6 @@
 {
   "loadout.hotkey.apply": "로드아웃 {0} 적용",
-  "loadout.hotkey.windowToggle": "로드아웃 전환 열기",
+  "loadout.hotkey.windowToggle": "로드아웃 전환 창 열기",
   "loadout.toast.apiNotReady": "로드아웃 API 아직 준비되지 않음",
   "loadout.toast.inProgress": "이미 전환 진행 중",
   "loadout.toast.noSlot": "슬롯 {0}에 로드아웃 없음",
