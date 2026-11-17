@@ -30,7 +30,7 @@ public sealed partial class Plugin
     private const float WindowWidth  = 520f;
     private const float StatusLineH  = 16f;
     private const float SettingRowH  = 28f;
-    private const float FooterLineH  = 20f;   // ≥ the plain 14 px "✓"/"⚠" glyph line, so feedback never grows the window
+    private const float FooterLineH  = 20f;   // ≥ the plain 14 px "✓" glyph line, so feedback never grows the window
     private const float SeasonPollS  = 2f;
 
     private IWindowControl _dsWindow = null!;

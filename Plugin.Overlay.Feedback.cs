@@ -13,7 +13,7 @@ namespace Stellar.LoadoutSwitcher;
 /// for <see cref="FooterShowS"/>.</item>
 /// </list>
 /// The footer is ONE fixed-height line whatever it says, in priority order: the open copy confirm's warnings (amber
-/// "⚠ Includes unsaved changes · changes …"), the feedback above, the season-blocked note, the standing hotkey hint.
+/// "Includes unsaved changes · changes …", text only), the feedback above, the season-blocked note, the standing hotkey hint.
 /// The event records WHAT happened (kind + ids + names); the text is composed on the next poll and again only if the
 /// language switches while it shows. The NoticeTips toasts are unchanged.
 /// </summary>
@@ -22,7 +22,6 @@ public sealed partial class Plugin
     private const float FlashShowS  = 1f;
     private const float FooterShowS = 3f;
     private const string CheckGlyph = "✓";   // plain 14 px text: the regular TMP face lacks ✓ (KB Stellar-Design-Language)
-    private const string WarnGlyph  = "⚠";
 
     private enum FeedbackKind : byte { None, Bound, Copied }
     private enum FooterMode : byte { Default, SeasonBlocked, Feedback, ConfirmHint }
@@ -80,7 +79,6 @@ public sealed partial class Plugin
 
     private string FooterGlyph() => CurrentFooterMode() switch
     {
-        FooterMode.ConfirmHint => WarnGlyph,
         FooterMode.Feedback    => CheckGlyph,
         _                      => string.Empty,
     };
@@ -94,8 +92,9 @@ public sealed partial class Plugin
         _                      => MutedColor(),
     };
 
-    // [plain glyph][12 px text] while there is a glyph, the 12 px text alone otherwise — the glyph is a separate PLAIN
-    // text because the 12 px RichEmoji (regular TMP) face draws "✓" as nothing (AutoFishing, 2026-11-17); the plain
+    // [plain glyph][12 px text] while there is a glyph (only the "✓" feedback), the 12 px text alone otherwise — the
+    // amber copy-confirm hint has NO glyph: "⚠" drew blank in-game even as plain text (2026-11-18). The glyph is a PLAIN
+    // separate text because the 12 px RichEmoji (regular TMP) face draws "✓" as nothing (AutoFishing, 2026-11-17); the plain
     // menu font draws it (Maestro's "✓ Added" footer). The strut pins the line, so neither variant moves the window.
     private HudElement BuildFooter()
     {
