@@ -10,6 +10,7 @@
   "ds.toast.refused": "Deep-Slumberの変更が拒否されました",
   "ds.toast.unavailable": "Deep-Slumberはまだ利用できません",
   "ds.toast.alreadyApplied": "Deep-Slumberの設定は適用済みです",
+  "ds.toast.seasonBlocked": "要素の復元はオフです：シーズン3でのみ対応しています",
   "loadout.dsbindings.title": "ロードアウトスイッチャー",
   "loadout.dsbindings.autoApply": "切り替え時に自動適用",
   "loadout.dsbindings.colName": "ロードアウト",

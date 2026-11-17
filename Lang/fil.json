@@ -10,6 +10,7 @@
   "ds.toast.refused": "Tinanggihan ang pagbabago ng Deep-Slumber",
   "ds.toast.unavailable": "Hindi pa available ang Deep-Slumber",
   "ds.toast.alreadyApplied": "Naka-apply na ang Deep-Slumber setup",
+  "ds.toast.seasonBlocked": "Naka-off ang pag-restore ng factors: sa Season 3 lang ito suportado",
   "loadout.dsbindings.title": "Loadout Switcher",
   "loadout.dsbindings.autoApply": "Auto-apply kapag naglipat",
   "loadout.dsbindings.colName": "Loadout",

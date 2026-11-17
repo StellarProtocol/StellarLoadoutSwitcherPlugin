@@ -10,6 +10,7 @@
   "ds.toast.refused": "Perubahan Deep-Slumber ditolak",
   "ds.toast.unavailable": "Deep-Slumber belum tersedia",
   "ds.toast.alreadyApplied": "Setup Deep-Slumber sudah diterapkan",
+  "ds.toast.seasonBlocked": "Pemulihan faktor nonaktif: hanya didukung di Season 3",
   "loadout.dsbindings.title": "Loadout Switcher",
   "loadout.dsbindings.autoApply": "Terapkan otomatis saat beralih",
   "loadout.dsbindings.colName": "Loadout",
