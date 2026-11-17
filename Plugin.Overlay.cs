@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Stellar.Abstractions.Domain;
 using Stellar.Abstractions.Domain.Loadout;
 using Stellar.Abstractions.Plugins;
@@ -9,55 +8,67 @@ using Stellar.Abstractions.Services;
 namespace Stellar.LoadoutSwitcher;
 
 /// <summary>
-/// The Deep-Slumber binding-manager overlay: one row per saved loadout showing its bound setup
-/// (line area + factor count) or "no binding", with a per-row <b>Clear</b>, a <b>Bind current</b>
-/// control that is only present on the currently-active loadout row (you can only snapshot the LIVE
-/// Deep-Slumber, which belongs to the current class), and a master <b>Auto-apply on switch</b> toggle.
-/// Storage/logic live in <see cref="Plugin"/>'s <c>GetBinding</c>/<c>ClearBinding</c>/<c>BindCurrent</c>/
-/// <c>AutoApply</c> (Tasks 6/7); this partial is presentation only. Row status is cached in
-/// <see cref="_dsBoundStatus"/> and refreshed on <see cref="ILoadout.LoadoutsChanged"/> / bind / clear —
-/// never re-deserialized inside a poll-diffed row <c>Func</c>.
+/// The Loadout Switcher window, house style (approved redesign 2026-11-17,
+/// <c>_scratch\prototypes\loadoutswitcher-redesign-APPROVED.md</c>, all recommended A options). Top → bottom:
+///   ToolHeader [40 px accent tile + swap-arrows glyph | bold title over ONE live status line]
+///   RESTORE FACTORS  hint "Season 3" + "?" · [label | 64×24 On/Off chip] (= the AutoApply setting)
+///   LOADOUTS         hint "● = wearing" + "?" · a fixed 8-row list (28 px pitch), scrolling past 8
+///   footer           one fixed-height line: feedback / copy-confirm warnings / a standing hint
+/// Every line is pinned (struts, fixed cells, every pill/chip variant the same size), so the window keeps ONE height in
+/// every state. No per-frame work of its own: the framework's scheduled refresh polls the Funcs, which only hand back
+/// cached strings (Plugin-Performance-Rules §2/§5). Rows: <c>Plugin.Overlay.Rows.cs</c>; copy confirm:
+/// <c>Plugin.Copy.Overlay.cs</c>; feedback + footer: <c>Plugin.Overlay.Feedback.cs</c>; help: <c>Plugin.Help.cs</c>.
+///
+/// <para><b>Season gate in the UI.</b> The restore only runs in Season 3 (<see cref="SeasonGate"/>; the apply path
+/// re-reads the season itself at apply time). The window shows the gate from a CACHED season id — read when the window
+/// opens, on <see cref="ILoadout.LoadoutsChanged"/>, and at most every <see cref="SeasonPollS"/> while visible — never
+/// per frame (a Lua round-trip). Outside Season 3 (incl. unknown / pre-sync 0) the header and the hint turn amber and
+/// the chip is recessed showing Off; the saved AutoApply value is NOT modified. Copy is not season-gated.</para>
 /// </summary>
 public sealed partial class Plugin
 {
-    // Over-provisioned above any realistic saved-loadout count (the hotkey path caps at 10, but the game
-    // permits more loadouts). Rows are built ONCE; LoadoutsChanged only updates state + MarkDirty.
-    private const int DsRowPoolSize = 24;
+    private const float WindowWidth  = 520f;
+    private const float StatusLineH  = 16f;
+    private const float SettingRowH  = 28f;
+    private const float FooterLineH  = 20f;   // ≥ the plain 14 px "✓" glyph line, so feedback never grows the window
+    private const float SeasonPollS  = 2f;
 
     private IWindowControl _dsWindow = null!;
     private IHotkeyAction _dsToggle = null!;
     private IDisposable _dsLauncherEntry = null!;
-    private IReadOnlyList<LoadoutSlot> _dsSlots = Array.Empty<LoadoutSlot>();
-    // loadoutId -> bound-setup NUMBERS (area count, the single area's id for the 1-area label, factor
-    // count); PRESENCE means "bound" (drives the accent colour + Clear-enabled). Cache the NUMBERS, not
-    // a localized string, so the status re-localizes LIVE when the language changes — DsStatusText
-    // formats it each frame. A cached string would stay in whatever language was active when the loadout
-    // last changed (owner smoke 2026-08-25: switching Thai→English left bound rows reading Thai).
-    private readonly Dictionary<int, (int areaCount, int firstAreaId, int factors)> _dsBoundStatus = new();
 
     private void InitOverlay()
     {
         RefreshDsRows();
 
+        // The help popover first: the main window's "?" dots read _helpWindow while it is (pre)built.
+        _helpWindow = RegisterHelpWindow();
+
         _dsWindow = _services.Windows.Register(new WindowRegistration(
             new WindowSpec(
                 Id:          "loadoutswitcher.dsbindings",
-                Title:       _loc.T("loadout.dsbindings.title"),
-                // Width 500 = the 448px column budget (130+140+100+60 + 3×6 gaps) + GlassMenu body
-                // padding (24) + scrollbar inset (9), with margin — a narrower window clips the Clear
-                // column past the ScrollElement RectMask2D (ux-ui review, computed from WindowBuilder
-                // constants). X/Y = offset from the top-right anchor; 0 height = content-sized.
-                DefaultRect: new WindowRect(20f, 120f, 500f, 0f),
+                Title:       _loc.T(KeyTitle),
+                // 520 = the 466 px row (3 + 5 + 150 + 6 + 150 + 6 + 116 + 6 + 24) + the 9 px scroll inset + the panel's
+                // 2 × 10 padding + GlassMenu's 2 × 12 body padding (+1 px slack). X/Y = offset from the top-right anchor;
+                // 0 height = content-sized (the content itself never changes height). A non-resizable anchored window
+                // takes its size from DefaultRect, so a 500 px rect saved by 2.9 does not clip the new layout.
+                DefaultRect: new WindowRect(20f, 120f, WindowWidth, 0f),
                 Category:    WindowCategory.Tools,
                 Style:       WindowPanelStyle.GlassMenu)
             {
                 StartVisible = false, Closable = true, Draggable = true,
                 Anchor = WindowAnchor.TopRight,
+                // Live-localized chrome title (same text as the header and the launcher tile); Title above is the fallback.
+                TitleProvider = () => _loc.T(KeyTitle),
+                // Built while hidden so the first open doesn't pay for the 24-row pool (Plugin-Performance-Rules §5).
+                // Every Func is safe without game state (it only reads cached plugin fields), and the list reports 0
+                // rows while hidden (DsVisibleRows), so the hidden build binds nothing.
+                Prebuild = true,
                 ShouldRender = () => _services.ClientState.Phase == GamePhase.World
                                      && (_services.ClientState.UiState & GameUIState.Loading) == 0,
             },
             BuildDsRoot(),
-            OnClose: () => { CancelCopy(); _dsWindow.SetVisiblePersist(false); }));
+            OnClose: () => { CancelCopy(); CloseHelp(); _dsWindow.SetVisiblePersist(false); }));
 
         _dsToggle = _services.Hotkeys.DeclareAction(
             new HotkeyAction(
@@ -69,37 +80,44 @@ public sealed partial class Plugin
         // Launcher-rail tile so the window is discoverable (not hotkey-only) — the hotkey has no
         // default binding, so without this the overlay is invisible to a new user. TitleProvider makes
         // the tile re-localize LIVE on a language change (Title alone is a captured string); Title stays
-        // the stable pinned-state identity.
-        // Title stays the fixed literal "Loadout Switcher" — the stable pin-identity key
-        // (ILauncher.cs:49-50) — so a pinned tile survives a language change; TitleProvider carries the
-        // live-localized display.
+        // the fixed literal "Loadout Switcher" — the stable pin-identity key (ILauncher.cs:49-50) — so a
+        // pinned tile survives a language change.
         _dsLauncherEntry = _services.Launcher.Register(new LauncherEntry(
             "Loadout Switcher", IconPng: LoadLauncherIcon(), IconKey: null,
             OnOpen: ToggleDsWindow)
         {
             ShouldShow = () => _services.ClientState.Phase == GamePhase.World,
-            TitleProvider = () => _loc.T("loadout.dsbindings.title"),
+            TitleProvider = () => _loc.T(KeyTitle),
         });
 
         _services.Loadout.LoadoutsChanged += OnDsLoadoutsChanged;
-        _services.ClientState.Logout += OnCopyLogout;
+        _services.ClientState.Logout += OnOverlayLogout;
         _loc.LanguageChanged += OnCopyLanguageChanged;
     }
 
-    // Hotkey + launcher tile: hiding the window cancels an open copy confirm (spec § 2.3).
+    // Hotkey + launcher tile: hiding the window cancels an open copy confirm (spec § 2.3) and closes the help tip;
+    // opening it reads the season first, so the gate shows correctly on the very first frame.
     private void ToggleDsWindow()
     {
-        if (_dsWindow.IsShown) CancelCopy();
-        _dsWindow.SetVisiblePersist(!_dsWindow.IsShown);
+        if (_dsWindow.IsShown)
+        {
+            CancelCopy();
+            CloseHelp();
+            _dsWindow.SetVisiblePersist(false);
+            return;
+        }
+        RefreshSeason();
+        _dsWindow.SetVisiblePersist(true);
     }
 
     private void DisposeOverlay()
     {
         _services.Loadout.LoadoutsChanged -= OnDsLoadoutsChanged;
-        _services.ClientState.Logout -= OnCopyLogout;
+        _services.ClientState.Logout -= OnOverlayLogout;
         _loc.LanguageChanged -= OnCopyLanguageChanged;
         try { _dsLauncherEntry?.Dispose(); } catch { /* disposal must not throw */ }
         try { _dsToggle?.Dispose(); } catch { /* disposal must not throw */ }
+        try { _helpWindow?.Remove(); } catch { /* disposal must not throw */ }
         try { _dsWindow?.Remove(); } catch { /* disposal must not throw */ }
     }
 
@@ -107,174 +125,111 @@ public sealed partial class Plugin
     {
         RefreshDsRows();
         CancelCopyIfStale();   // a switch changes the worn loadout → an armed copy no longer means the same thing
+        RefreshSeason();       // a switch / list change is a natural moment to re-check (rare, never per frame)
     }
 
-    // The launcher-rail tile icon (embedded swap-arrows PNG). Null → the launcher's default glyph.
-    private static byte[]? LoadLauncherIcon()
+    // Logout: synchronously (Update is world-gated, so no Post) drop an armed copy and close both windows, so nothing
+    // stays up through the loading screen (house rule, MultiTool 3554a1e). SetVisible, not SetVisiblePersist: logging
+    // out is not the player closing the window.
+    private void OnOverlayLogout()
     {
-        try
-        {
-            using var s = typeof(Plugin).Assembly
-                .GetManifestResourceStream("Stellar.LoadoutSwitcher.loadoutswitcher-icon.png");
-            if (s is null) return null;
-            using var ms = new System.IO.MemoryStream();
-            s.CopyTo(ms);
-            return ms.ToArray();
-        }
-        catch { return null; }
+        CancelCopy();
+        CloseHelp();
+        if (_dsWindow.IsShown) _dsWindow.SetVisible(false);
     }
 
-    // Re-read the loadout list + rebuild the per-loadout status cache (a JSON deserialize per bound
-    // loadout — done here on change, NOT per poll tick), then repaint.
-    private void RefreshDsRows()
+    // The launcher-rail tile icon (embedded swap-arrows PNG, unchanged). Null → the launcher's default glyph.
+    private static byte[]? LoadLauncherIcon() => CachedPng("loadoutswitcher-icon.png");
+
+    // ── season cache ──────────────────────────────────────────────────────────────────────────────────────────────
+    private double? _seasonCached;
+    private float _seasonReadAt = float.NegativeInfinity;
+
+    private bool SeasonBlocked() => !SeasonGate.AllowsApply(_seasonCached);
+
+    // Main thread only (ReadCurrentSeasonId → ILua): the window toggle, LoadoutsChanged and the Update tick all are.
+    private void RefreshSeason()
     {
-        _dsSlots = _services.Loadout.GetSlots();
-        _dsBoundStatus.Clear();
-        foreach (var slot in _dsSlots)
-        {
-            var setup = GetBinding(slot.Index);
-            if (setup is null) continue;
-            var factors = setup.Areas.Sum(a => a.Factors.Count);
-            _dsBoundStatus[slot.Index] = (
-                setup.Areas.Count,
-                setup.Areas.Count == 1 ? setup.Areas[0].AreaId : 0,
-                factors);
-        }
-        RefreshCopyTexts();   // worn slot, "← <worn>" label, row names — cached, never built per frame
+        var season = ReadCurrentSeasonId();
+        _seasonReadAt = _services.Framework.TimeNow;
+        if (season == _seasonCached) return;
+        _seasonCached = season;
         _dsWindow?.MarkDirty();
     }
 
-    private LoadoutSlot? DsRowAt(int i) => i < _dsSlots.Count ? _dsSlots[i] : null;
-
-    private bool DsIsBound(int i) => DsRowAt(i) is { } slot && _dsBoundStatus.ContainsKey(slot.Index);
-
-    private string DsStatusText(int i)
+    // OnUpdate: one bool + one float compare while hidden or between polls. A window restored visible at login (its
+    // persisted state) is read on the first tick (_seasonReadAt starts at -∞).
+    private void SeasonPollTick()
     {
-        if (DsRowAt(i) is not { } slot) return "";
-        if (!_dsBoundStatus.TryGetValue(slot.Index, out var d)) return _loc.T("loadout.dsbindings.noBinding");
-        // Format LIVE (not from a cached string) so a language switch re-localizes it immediately.
-        return d.areaCount == 1
-            ? _loc.TFormat("loadout.dsbindings.boundOneArea", d.firstAreaId, d.factors)
-            : _loc.TFormat("loadout.dsbindings.boundManyAreas", d.areaCount, d.factors);
+        if (_dsWindow?.IsShown != true) return;
+        if (_services.Framework.TimeNow - _seasonReadAt >= SeasonPollS) RefreshSeason();
     }
 
-    private void OnDsBindCurrent(LoadoutSlot? slot)
+    // ── layout ────────────────────────────────────────────────────────────────────────────────────────────────────
+    private HudElement BuildDsRoot() => new ColumnElement(new HudElement[]
     {
-        if (slot is null) return;   // Bind-current is only offered on the active row; BindCurrent() keys off CurrentIndex.
-        var ok = BindCurrent();
-        _services.NoticeTips.Create(ok ? NoticeTipType.GreenBar : NoticeTipType.RedBar)
-            .WithContent(ok ? _loc.TFormat("loadout.dsbindings.bound", slot.Name) : _loc.T("loadout.dsbindings.bindFailed"))
-            .Show();
-        RefreshDsRows();
-    }
-
-    private void OnDsClear(LoadoutSlot? slot)
-    {
-        if (slot is null) return;
-        ClearBinding(slot.Index);
-        RefreshDsRows();
-    }
-
-    // The fixed per-row element pool (one row per loadout slot, capped at DsRowPoolSize). Rows are
-    // built ONCE and read live via DsRowAt(idx); LoadoutsChanged only updates state + MarkDirty.
-    private HudElement[] BuildDsRowPool()
-    {
-        var pool = new HudElement[DsRowPoolSize];
-        for (var i = 0; i < DsRowPoolSize; i++)
+        BuildHeader(),
+        SectionPanel(KeyRestoreCaption, SectionHint(RestoreHintText, RestoreHintColor), HelpDot(HelpTopic.Restore), new[]
         {
-            var idx = i;   // capture per row
-
-            var nameCell = new CellElement(
-                new TextElement(() => DsRowName(idx), Width: 130f, NoWrap: true), Width: 130f);
-
-            var statusCell = new CellElement(
-                new TextElement(() => DsStatusText(idx),
-                    () => DsIsBound(idx)
-                        ? (ColorRgba?)_services.Theme.Colors.MenuAccent
-                        : (ColorRgba?)_services.Theme.Colors.MenuMuted,
-                    NoWrap: true), Width: 140f);
-
-            var bindCell = BuildBindOrCopyCell(idx);
-
-            var clearCell = new CellElement(new ButtonElement(
-                () => _loc.T("loadout.dsbindings.clear"),
-                () => OnDsClear(DsRowAt(idx)),
-                Enabled: () => DsIsBound(idx) && !CopyFreezesRows(), Width: 56f), Width: 60f);
-
-            // Binding + both action cells (140+6+100+6+60 = 312 px) swap for the inline copy confirm bar.
-            var actions = new CellElement(new ConditionalElement(
-                () => IsCopyConfirming(idx),
-                Then: BuildCopyConfirmBar(idx),
-                Else: new RowElement(new HudElement[] { statusCell, bindCell, clearCell }, Gap: 6f)), Width: 312f);
-
-            var row = new RowElement(new HudElement[] { nameCell, actions }, Gap: 6f);
-            pool[idx] = new SelectableElement(row, OnClick: () => { }, Selected: () => DsRowAt(idx)?.IsCurrent == true);
-        }
-        return pool;
-    }
-
-    // Third cell: "Bind current" on the worn row, "← <worn>" (copy into this row) on every other row.
-    private HudElement BuildBindOrCopyCell(int idx)
-    {
-        // "Bind current" is present ONLY on the currently-active row; every branch is the same 100 px cell so
-        // the Clear column's x-position stays identical across rows (Then/Else are both built once, toggled).
-        return new ConditionalElement(
-            () => DsRowAt(idx)?.IsCurrent == true,
-            Then: new CellElement(new ButtonElement(
-                () => _loc.T("loadout.dsbindings.bindCurrent"),
-                () => OnDsBindCurrent(DsRowAt(idx)), Enabled: () => !CopyFreezesRows(), Width: 96f), Width: 100f),
-            // Every OTHER row: "← <worn>" copies the worn loadout into this row (spec § 2.1). Same 100px
-            // cell; a long worn name is cut with "…" (CopyButtonText) — the confirm bar shows it in full.
-            Else: new CellElement(new ConditionalElement(
-                () => CopyButtonShown(idx),
-                Then: new ButtonElement(CopyButtonText, () => ArmCopy(idx),
-                    Enabled: () => CurrentCopyGate().ButtonEnabled, Width: 96f),
-                Else: new SpacerElement()), Width: 100f));
-    }
-
-    private HudElement BuildDsRoot()
-    {
-        var pool = BuildDsRowPool();
-
-        var header = new RowElement(new HudElement[]
-        {
-            new CellElement(new TextElement(() => _loc.T("loadout.dsbindings.colName"),
-                () => (ColorRgba?)_services.Theme.Colors.MenuMuted), Width: 130f),
-            new CellElement(new TextElement(() => _loc.T("loadout.dsbindings.colStatus"),
-                () => (ColorRgba?)_services.Theme.Colors.MenuMuted), Width: 140f),
-            new CellElement(new SpacerElement(), Width: 100f),
-            new CellElement(new SpacerElement(), Width: 60f),
-        }, Gap: 6f);
-
-        // Muted intro paragraph (wraps to the window width — Width 0 + default NoWrap=false) explaining
-        // what a binding is, what Auto-apply does, and what "Bind current" captures. Deep-Slumber is
-        // named explicitly so the window is self-describing.
-        var helpText = new ColumnElement(new HudElement[]
-        {
-            new TextElement(() => _loc.T("loadout.dsbindings.help"), () => (ColorRgba?)_services.Theme.Colors.MenuMuted),
-            new TextElement(CopyHelpText, () => (ColorRgba?)_services.Theme.Colors.MenuMuted),
-        }, Gap: 4f);
-
-        var toggleRow = new RowElement(new HudElement[]
-        {
-            new ToggleElement(() => "", () => AutoApply, v => AutoApply = v),
-            new TextElement(() => _loc.T("loadout.dsbindings.autoApply")),
-        }, Gap: 6f);
-
-        // Empty state swaps BOTH the header and the list for a single muted sentence (per design).
-        var listOrEmpty = new ConditionalElement(
-            () => _dsSlots.Count > 0,
-            Then: new ColumnElement(new HudElement[]
+            FixedLine(SettingRowH, new RowElement(new HudElement[]
             {
-                header,
-                new ScrollElement(new ListElement(() => _dsSlots.Count, pool, Columns: 1), Height: 260f),
-            }, Gap: 8f),
-            Else: new TextElement(() => _loc.T("loadout.dsbindings.empty"),
-                () => (ColorRgba?)_services.Theme.Colors.MenuMuted));
+                new CellElement(new TextElement(() => _loc.T(KeyRestoreLabel),
+                    Color: () => SeasonBlocked() ? MutedColor() : TextColor(), NoWrap: true) { Ellipsize = true }, Weight: 1f),
+                OnOffChip(() => AutoApply, v => { AutoApply = v; _dsWindow.MarkDirty(); }, SeasonBlocked),
+            }, Gap: 8f)),
+        }),
+        SectionPanel(KeyLoadoutsCaption, WearingHint(), HelpDot(HelpTopic.Loadouts), new[] { BuildListOrEmpty() }),
+        BuildFooter(),
+    }, Gap: 8f);
 
-        return new ColumnElement(new HudElement[]
+    // "● = wearing", right-aligned: the "●" is PLAIN text (the plain menu font draws it, as the worn row's name always
+    // has) because it is a Geometric Shapes glyph — the block the TMP faces lack ("■" / "▾" draw blank, KB §6); the rest
+    // is the usual 12 px hint. The flexible spacer pushes both to the right edge.
+    private HudElement WearingHint() => new RowElement(new HudElement[]
+    {
+        new SpacerElement(0f),
+        new TextElement(() => WornDot, Color: () => MutedColor(), NoWrap: true),
+        SectionHint(() => _loc.T(KeyLoadoutsHint), MutedColor),
+    }, Gap: 4f);
+
+    // ── header ────────────────────────────────────────────────────────────────────────────────────────────────────
+    // The text column sits in a weighted cell, so a long status (a long loadout name) ellipsizes.
+    private HudElement BuildHeader() => new RowElement(new HudElement[]
+    {
+        IconBox(() => HeaderIconPng(ToolGlyphSize), ToolIconSize, ToolGlyphSize),
+        new CellElement(new ColumnElement(new HudElement[]
         {
-            helpText, new SeparatorElement(), toggleRow, new SeparatorElement(), listOrEmpty,
-        }, Gap: 8f);
-    }
+            new TextElement(() => _loc.T(KeyTitle), Color: () => TextColor(), Emphasis: true, NoWrap: true) { Ellipsize = true },
+            FixedLine(StatusLineH, new RowElement(new HudElement[]
+            {
+                StatusDot(StatusDotColor),
+                new CellElement(new TextElement(StatusText, Color: () => StatusTextColor(), NoWrap: true, FontSize: 12)
+                    { RichEmoji = true, Ellipsize = true }, Weight: 1f),
+            }, Gap: 5f)),
+        }, Gap: 2f), Weight: 1f),
+    }, Gap: 10f);
+
+    private ColorRgba StatusDotColor() => CurrentHeaderState() switch
+    {
+        HeaderState.On      => SuccessColor(),
+        HeaderState.Blocked => CautionColor(),
+        _                   => MutedColor(),
+    };
+
+    private readonly ContrastCache _statusInk = new();
+
+    // Amber text only when blocked (a solid status colour on the window background keeps 3:1, like AutoFishing's
+    // status word); the on / off lines stay muted with only the dot coloured (prototype .st).
+    private ColorRgba StatusTextColor() => CurrentHeaderState() == HeaderState.Blocked
+        ? _statusInk.Get(CautionColor(), WindowBg(), SolidMinContrast)
+        : MutedColor();
+
+    // ── RESTORE FACTORS hint ──────────────────────────────────────────────────────────────────────────────────────
+    private readonly ContrastCache _hintInk = new();
+
+    private string RestoreHintText() => _loc.T(SeasonBlocked() ? KeyRestoreHintBlocked : KeyRestoreHint);
+
+    private ColorRgba RestoreHintColor() => SeasonBlocked()
+        ? _hintInk.Get(CautionColor(), PanelColor(), PillMinContrast)
+        : MutedColor();
 }

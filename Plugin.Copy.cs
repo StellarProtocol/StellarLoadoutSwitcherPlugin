@@ -7,19 +7,19 @@ using Stellar.Abstractions.Services;
 namespace Stellar.LoadoutSwitcher;
 
 /// <summary>
-/// "Copy loadout" — the <c>← &lt;worn loadout&gt;</c> button on every non-worn row copies the setup the
+/// "Copy loadout" — the <b>Copy here</b> button on every non-worn row copies the setup the
 /// player is WEARING (including unsaved edits) into that row through the game's own Save
 /// (<see cref="ILoadoutSave.SaveCurrentToAsync"/>), then mirrors the worn loadout's Deep-Slumber binding onto
 /// it. Spec: <c>docs/superpowers/specs/2026-09-26-loadout-copy-design.md</c> (owner-approved 2026-09-26).
 ///
-/// <para><b>Confirm.</b> The overlay has no modal, so a click arms an inline confirm bar on the target row
-/// (Wardrobe's recipe). One confirm at a time; it is cancelled by ✕, closing the window, a loadout switch
+/// <para><b>Confirm.</b> The overlay has no modal, so a click arms an inline confirm on the target row
+/// (<c>Plugin.Copy.Overlay.cs</c>). One confirm at a time; it is cancelled by Cancel, closing the window, a loadout switch
 /// (the worn loadout changed, so the armed source is no longer what would be copied) and logout. Validity is
-/// ALSO re-checked at render and on ✓ (<see cref="CopyRules.ConfirmStillValid"/>), so a missed event can never
+/// ALSO re-checked at render and on Overwrite (<see cref="CopyRules.ConfirmStillValid"/>), so a missed event can never
 /// fire a stale copy.</para>
 ///
-/// <para><b>Per-frame cost.</b> Everything the row Funcs read is cached: the worn slot + button label + row
-/// names are rebuilt in <c>RefreshDsRows</c> (on <see cref="ILoadout.LoadoutsChanged"/>), the confirm texts
+/// <para><b>Per-frame cost.</b> Everything the row Funcs read is cached: the worn slot + row names + binding
+/// texts are rebuilt in <c>RefreshDsRows</c> (on <see cref="ILoadout.LoadoutsChanged"/>), the confirm texts
 /// once in <see cref="ArmCopy"/> (and on a language change), and the gate is memoized per Update tick.</para>
 ///
 /// <para><b>Threading.</b> The save's continuation may resume off the main thread, so it only POSTS the
@@ -30,15 +30,18 @@ public sealed partial class Plugin
 {
     private const int NoCopyTarget = int.MinValue;
 
-    private int _copyTargetId = NoCopyTarget;   // loadout id of the row whose confirm bar is open
+    private int _copyTargetId = NoCopyTarget;   // loadout id of the row whose inline confirm is open
     private int _copyArmedWornId;               // the worn loadout when the confirm was armed
     private long _copyArmedCharId;              // the character when the confirm was armed
     private int _copyInFlight;                  // 1 while a save runs (any-thread latch)
     private CopyOutcome? _copyOutcome;          // posted by the save continuation, consumed on the tick
 
-    // Confirm texts, formatted once per arm (and on a language change) — never per frame.
+    // Confirm texts, formatted once per arm (and on a language change) — never per frame. The class-change warning is
+    // pre-composed both alone and joined with the unsaved one, so the footer only PICKS a string per refresh (the
+    // unsaved state is live: HasUnsavedChanges can flip while the confirm is open).
     private string _copyQuestion = "";
-    private string _copyClassHint = "";
+    private string _copyHintClass = "";
+    private string _copyHintBoth = "";
     private bool _copyShowClassHint;
 
     // Gate memo: computed at most once per Update tick however many rows poll it.
@@ -82,18 +85,18 @@ public sealed partial class Plugin
 
     private bool ShowUnsavedHint() => CopyRules.ShowUnsavedHint(_services.LoadoutSave.HasUnsavedChanges);
 
-    // Format the confirm bar's question + class hint for the armed target. Called on arm and on a language
-    // change; the Funcs just return the cached strings.
+    // Format the confirm's question + class hint for the armed target. Called on arm and on a language change; the
+    // Funcs just return the cached strings.
     private void FormatCopyConfirmTexts()
     {
         LoadoutSlot? target = null;
         foreach (var s in _dsSlots) if (s.Index == _copyTargetId) { target = s; break; }
-        _copyQuestion = _loc.TFormat("loadout.copy.confirm", _wornSlot?.Name ?? "");
+        _copyQuestion = _loc.TFormat("loadout.copy.confirm", target?.Name ?? "", _wornSlot?.Name ?? "");
         var prof = SourceProfessionId();
         _copyShowClassHint = target is not null && CopyRules.ShowClassChangeHint(target.ProfessionId, prof);
-        _copyClassHint = _copyShowClassHint
-            ? _loc.TFormat("loadout.copy.hintClass", target!.Name, _services.GameData.Combat.GetProfession(prof)?.Name ?? $"#{prof}")
-            : "";
+        var className = _copyShowClassHint ? _services.GameData.Combat.GetProfession(prof)?.Name ?? $"#{prof}" : "";
+        _copyHintClass = _copyShowClassHint ? _loc.TFormat("loadout.copy.hintClass", target!.Name, className) : "";
+        _copyHintBoth  = _copyShowClassHint ? _loc.TFormat("loadout.copy.hintBoth", target!.Name, className) : "";
     }
 
     private void ArmCopy(int idx)
@@ -106,6 +109,7 @@ public sealed partial class Plugin
         _copyArmedCharId = CurCharId;
         FormatCopyConfirmTexts();
         InvalidateCopyGate();
+        _rowHover.Reset();   // the row's pill is replaced by the confirm; its hover must not survive the swap
         _dsWindow?.MarkDirty();
     }
 
@@ -114,24 +118,27 @@ public sealed partial class Plugin
         if (_copyTargetId == NoCopyTarget) return;
         _copyTargetId = NoCopyTarget;
         InvalidateCopyGate();
+        _rowHover.Reset();   // the confirm's pills go away; the row's own pill comes back un-hovered
         _dsWindow?.MarkDirty();
     }
 
-    // Event-driven cancel points (✕ and ✓ clear it directly): a loadout switch / list change, logout, and
-    // hiding the window. Stale state is harmless anyway (the gate re-validates), this just tidies it.
+    // Event-driven cancel points (Cancel and Overwrite clear it directly): a loadout switch / list change, logout
+    // (OnOverlayLogout), and hiding the window. Stale state is harmless anyway (the gate re-validates), this just tidies it.
     private void CancelCopyIfStale()
     {
         InvalidateCopyGate();
         if (_copyTargetId != NoCopyTarget && !ComputeConfirmOpen()) CancelCopy();
     }
 
-    private void OnCopyLogout() => CancelCopy();
-
+    // Live language switch: bump the composed-text generation (captions, status line, footer, help body) and rebuild
+    // the cached row / confirm strings, then repaint both windows on the next frame.
     private void OnCopyLanguageChanged()
     {
-        RefreshCopyTexts();
+        _langGen++;
+        RefreshRowTexts();
         if (_copyTargetId != NoCopyTarget) FormatCopyConfirmTexts();
         _dsWindow?.MarkDirty();
+        _helpWindow?.MarkDirty();
     }
 
     private void ConfirmCopy()
@@ -201,6 +208,8 @@ public sealed partial class Plugin
         _services.NoticeTips.Create(NoticeTipType.GreenBar)
             .WithContent(_loc.TFormat("loadout.copy.toastCopied", o.Source.Name, o.Target.Name) + "\n" + _loc.T("loadout.copy.toastParts"))
             .Show();
+        // Feedback where the click happened (house rule 13): the target row flashes "Copied", the footer confirms.
+        ShowFeedback(FeedbackKind.Copied, o.Target.Index, o.Source.Name, o.Target.Name);
     }
 
     // One always-on outcome line + the red toast with a second line saying WHY nothing changed.

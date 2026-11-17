@@ -117,6 +117,8 @@ public sealed partial class Plugin
         _tick++;
         ConsumeReapplyRequest();
         ConsumeCopyOutcome();   // a finished loadout copy (Plugin.Copy.cs) — main-thread bindings + toasts
+        HelpRepositionTick();   // the help popover's first-open placement (Plugin.Help.cs) — early-out when idle
+        SeasonPollTick();       // the window's cached season, ≤ every 2 s and only while visible (Plugin.Overlay.cs)
         if (_pendingIndex is not null && _tick >= _pendingDeadline) TryApplyPending();
     }
 
@@ -137,6 +139,20 @@ public sealed partial class Plugin
             DiagSkippedApply(idx.Value, $"class {liveProf} != binding class {setup.ProfessionId}");
             return;
         }
+        // Season gate — the ONLY path to ApplySetupAsync, so it covers both the switch and the
+        // same-loadout re-apply. Anything but Season 3 (incl. unknown/pre-sync 0) drops the apply and
+        // never touches the server. Read here, on this rare commit, never per frame.
+        var season = ReadCurrentSeasonId();
+        if (!SeasonGate.AllowsApply(season))
+        {
+            _pendingIndex = null;
+            _pendingIsReapply = false;
+            var shown = season?.ToString() ?? "unknown";
+            DiagSkippedApply(idx.Value, $"season {shown} not supported");
+            _services.Log.Info($"[LoadoutSwitcher] DS apply blocked: season={shown} (supported={SeasonGate.SupportedSeasonId})");
+            _services.NoticeTips.Create(NoticeTipType.RedBar).WithContent(_loc.T("ds.toast.seasonBlocked")).Show();
+            return;
+        }
         // settled + class matches: try to take the DS-apply latch (NOT _inFlight)
         if (Interlocked.CompareExchange(ref _applying, 1, 0) != 0)
         {
@@ -147,6 +163,24 @@ public sealed partial class Plugin
         _pendingIndex = null;                                     // committed
         _pendingIsReapply = false;
         _ = ApplyDeepSlumberAsync(setup, reapply);
+    }
+
+    // Park-and-read (Framework-Interop-Foundation.md §2): ILua.DoString has no return value, so the chunk
+    // clears a global, then pcall-parks season_data.CurSeasonId (the field SeasonVM.GetCurrentSeasonId
+    // returns; server-pushed int32 via WorldNtf.SyncSeason, 0 until then) into it. A static string
+    // literal — no per-call allocation. A Lua error leaves the global nil → unreadable → blocked.
+    private const string SeasonGlobal = "__lsw_season";
+    private const string SeasonChunk =
+        "rawset(_G,'__lsw_season',nil) pcall(function() rawset(_G,'__lsw_season',Z.DataMgr.Get('season_data').CurSeasonId) end)";
+
+    // Main thread only (ILua contract) — every caller of TryApplyPending runs on the game tick.
+    private double? ReadCurrentSeasonId()
+    {
+        var lua = _services.Lua;
+        if (lua is null || !lua.Ready) return null;   // DoString would be a no-op → treat as unknown
+        lua.DoString(SeasonChunk);
+        // Type-strict: true only for a Lua number, so nil (missing data / Lua error) reads as null.
+        return lua.TryReadGlobalNumber(SeasonGlobal, out var id) ? id : null;
     }
 
     private async Task ApplyDeepSlumberAsync(DeepSlumberSetup setup, bool reapply)

@@ -42,11 +42,11 @@ internal static class CopyRules
     public static bool ShowCopyButton(bool rowExists, bool rowIsWorn, bool wornKnown)
         => rowExists && wornKnown && !rowIsWorn;
 
-    /// <summary>"⚠ includes unsaved changes" — shown only when the game says the worn setup differs from
+    /// <summary>"includes unsaved changes" — shown only when the game says the worn setup differs from
     /// its saved data.</summary>
     public static bool ShowUnsavedHint(bool hasUnsavedChanges) => hasUnsavedChanges;
 
-    /// <summary>"⚠ changes &lt;T&gt; to &lt;class&gt;" — shown only when the target's saved class differs from
+    /// <summary>"changes &lt;T&gt; to &lt;class&gt;" — shown only when the target's saved class differs from
     /// the class being copied. An unresolved class (0) on either side never claims a change.</summary>
     public static bool ShowClassChangeHint(int targetProfessionId, int sourceProfessionId)
         => targetProfessionId != 0 && sourceProfessionId != 0 && targetProfessionId != sourceProfessionId;
