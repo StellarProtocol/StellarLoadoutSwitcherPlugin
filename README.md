@@ -18,12 +18,12 @@ Pressing the hotkey of the loadout you already have equipped re-applies its boun
 
 ## Copying a loadout (2.8.0, needs framework >= 2.10.0)
 
-Every row except the one you're wearing has a **`← <worn loadout>`** button. It copies the loadout you
+Every row except the one you're wearing (marked ●) has a **Copy here** button. It copies the loadout you
 are wearing right now — including edits you haven't saved — into that row: gear, modules, skills,
 talents and Battle Imagines (through the game's own Save), plus the worn loadout's Deep-Slumber binding
 (if the worn loadout has none, the row's binding is cleared). The row keeps its name and you stay on
-your current loadout. A confirm bar asks first and warns when the copy includes unsaved changes or
-changes the row's class. Each attempt logs one line:
+your current loadout. The row first turns into a confirm ("Overwrite <row> with <worn>?"); the footer warns
+when the copy includes unsaved changes or changes the row's class. Each attempt logs one line:
 
 ```
 [LoadoutSwitcher] copy 4→3 ok

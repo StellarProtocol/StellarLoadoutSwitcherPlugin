@@ -55,13 +55,16 @@ public sealed partial class Plugin
     /// Read-only now — <see cref="MigrateLegacyBindings"/> is its only caller.</summary>
     private static string BindingKey(int loadoutId) => BindingPrefix + loadoutId + "#";
 
-    /// <summary>Master toggle for the auto-apply trigger. Defaults on. A SETTING — stays in the shared
-    /// config file.</summary>
+    /// <summary>Master toggle for the auto-apply trigger ("Restore bound factors when I switch loadout"). Defaults
+    /// on. A SETTING — stays in the shared config file. Cached after the first read: the window polls it every
+    /// refresh (header status, chip), and this plugin is its only writer.</summary>
     internal bool AutoApply
     {
-        get => _cfg.Get(AutoApplyKey, true);
-        set { _cfg.Set(AutoApplyKey, value); _cfg.Save(); }
+        get => _autoApply ??= _cfg.Get(AutoApplyKey, true);
+        set { _autoApply = value; _cfg.Set(AutoApplyKey, value); _cfg.Save(); }
     }
+
+    private bool? _autoApply;
 
     /// <summary>The current character's id (<c>PlayerState.CharId</c>); <c>0</c> while unresolved
     /// (title / character select / just after logout).</summary>

@@ -1,102 +1,66 @@
-using System;
-using System.Collections.Generic;
-using Stellar.Abstractions.Domain;
 using Stellar.Abstractions.Domain.Loadout;
 using Stellar.Abstractions.Services;
 
 namespace Stellar.LoadoutSwitcher;
 
-/// <summary>Presentation for the copy feature (<c>Plugin.Copy.cs</c> owns state + actions): the cached row
-/// texts, the inline confirm bar that replaces a row's Binding + action cells, the worn-row marker, and the
-/// ✓/✕ icon chips (the same PNGs as Wardrobe's confirm, embedded here — the overlay font draws the plain
-/// glyphs poorly).</summary>
+/// <summary>Presentation for the copy feature (<c>Plugin.Copy.cs</c> owns state + actions): the cached row texts and
+/// the INLINE confirm that replaces a row's whole tile (approved redesign 2026-11-17, option A): an amber-washed tile
+/// with the bold question "Overwrite &lt;target&gt; with &lt;worn&gt;?" and a Danger "Overwrite" + Neutral "Cancel" pill
+/// (84×24). The unsaved / class-change warnings moved to the footer line (amber, Plugin.Overlay.Feedback.cs), so the
+/// row never grows.</summary>
 public sealed partial class Plugin
 {
-    /// <summary>The copy arrow, in ONE place: the button label and the help sentence both use it. The owner
-    /// is checking whether "←" renders in-game; the fallback is "◀" (Geometric Shapes, known to render).</summary>
-    internal const string CopyArrow = "←";
+    // Confirm tile geometry: 8 px lead-in + question + 2 × (6 + 84) = 464 of the 466 px row (2 px slack).
+    private const float ConfirmLeadIn    = 8f;
+    private const float ConfirmPillW     = 84f;
+    private const float ConfirmPillPadX  = 6f;     // label box 72: "Overwrite" ≈ 68 px of bold 12; every locale fits
+    private const float ConfirmQuestionW = 276f;
 
-    // Confirm-bar geometry: the 312 px it replaces = question column + two 32 px chip cells + 2 × 6 px gaps.
-    private const float ConfirmBarWidth = 312f;
-    private const float ConfirmChipCell = 32f;
-    private const float ConfirmGap = 6f;
-    private const float ConfirmTextWidth = ConfirmBarWidth - 2 * (ConfirmChipCell + ConfirmGap);   // 236
-    private const int ConfirmHintFontSize = 12;
-
-    // The button's 96 px cannot measure glyphs, so the worn name is cut by DISPLAY UNITS (CJK/emoji = 2,
-    // others 1 — CopyRules.Ellipsize). The confirm bar always shows the full name.
-    private const int CopyButtonNameUnits = 16;
-
-    private static readonly byte[]? ConfirmYesIcon = LoadResource("Stellar.LoadoutSwitcher.confirm-yes.png");
-    private static readonly byte[]? ConfirmNoIcon = LoadResource("Stellar.LoadoutSwitcher.confirm-no.png");
-
-    // Rebuilt in RefreshCopyTexts (LoadoutsChanged via RefreshDsRows, language change) — read per frame.
+    // Rebuilt in RefreshRowTexts (LoadoutsChanged via RefreshDsRows, language change) — read per frame.
     private LoadoutSlot? _wornSlot;
-    private string _copyButtonLabel = "";
-    private string _copyHelpText = "";
-    private readonly List<string> _dsRowNames = new();
 
-    private void RefreshCopyTexts()
+    private void RefreshRowTexts()
     {
         _wornSlot = null;
-        _dsRowNames.Clear();
+        _dsStatusTexts.Clear();
         foreach (var slot in _dsSlots)
         {
             if (slot.IsCurrent) _wornSlot = slot;
-            _dsRowNames.Add(slot.IsCurrent ? "● " + slot.Name : slot.Name);   // ● marks the copy SOURCE
+            _dsStatusTexts.Add(BindingText(slot.Index));
         }
-        _copyButtonLabel = CopyArrow + " " + CopyRules.Ellipsize(_wornSlot?.Name ?? "", CopyButtonNameUnits);
-        _copyHelpText = _loc.TFormat("loadout.copy.help", CopyArrow);
         InvalidateCopyGate();
     }
 
-    private string DsRowName(int idx) => idx < _dsRowNames.Count ? _dsRowNames[idx] : "";
-
-    private string CopyButtonText() => _copyButtonLabel;
-
-    private string CopyHelpText() => _copyHelpText;
+    // The slot's own Name (a stable string instance) — the worn row's "●" is drawn by the row itself.
+    private string DsRowName(int idx) => DsRowAt(idx)?.Name ?? "";
 
     // Rows freeze while a copy confirm is open (one at a time) or a copy is running.
     private bool CopyFreezesRows() { var g = CurrentCopyGate(); return g.ConfirmOpen || g.CopyInFlight; }
 
-    private HudElement BuildCopyConfirmBar(int idx)
+    private HudElement BuildCopyConfirmTile(int idx)
     {
-        Func<ColorRgba?> warn = () => _services.Theme.Colors.Warning;
-        var text = new ColumnElement(new HudElement[]
+        var dangerLabel = new SolidLabelCache();
+        var cancelLabel = new ContrastCache();
+        return new BubbleElement(new RowElement(new HudElement[]
+            {
+                new SpacerElement(ConfirmLeadIn, ListTileHeight),   // lead-in + the 26 px height strut
+                new RowElement(new HudElement[]
+                {
+                    // The question names BOTH loadouts in full (one line, cut with "…" only if it can't fit).
+                    new TextElement(() => _copyQuestion, Color: () => TextColor(), Width: ConfirmQuestionW, NoWrap: true,
+                        FontSize: 13) { Bold = true, Ellipsize = true },
+                    RowPill(() => _loc.T(KeyOverwrite), DangerFill, () => dangerLabel.Get(DangerFill()), ConfirmCopy,
+                        ConfirmPillW, ConfirmPillPadX, () => ConfirmHover(_rowHover.Yes, idx),
+                        over => _rowHover.Yes[idx] = over, ConfirmTileColor),
+                    RowPill(() => _loc.T(KeyCancel), NeutralFill, () => cancelLabel.Get(TextColor(), NeutralFill(), PillMinContrast),
+                        CancelCopy, ConfirmPillW, ConfirmPillPadX, () => ConfirmHover(_rowHover.No, idx),
+                        over => _rowHover.No[idx] = over, ConfirmTileColor),
+                }, Gap: RowGap),
+            }, Gap: 0.01f))
         {
-            // Question: default menu text colour (Wardrobe's confirm), one line, clipped at the column edge.
-            new TextElement(() => _copyQuestion, Width: ConfirmTextWidth, NoWrap: true),
-            // Hints: warning colour, smaller, and they WRAP (the row grows) — never overflow onto ✓/✕.
-            new ConditionalElement(ShowUnsavedHint,
-                Then: new TextElement(() => _loc.T("loadout.copy.hintUnsaved"), warn,
-                    Width: ConfirmTextWidth, FontSize: ConfirmHintFontSize)),
-            new ConditionalElement(() => _copyShowClassHint,
-                Then: new TextElement(() => _copyClassHint, warn,
-                    Width: ConfirmTextWidth, FontSize: ConfirmHintFontSize)),
-        }, Gap: 2f);
-
-        return new RowElement(new HudElement[]
-        {
-            new CellElement(text, Width: ConfirmTextWidth),
-            new CellElement(ConfirmChip(ConfirmYesIcon, ConfirmCopy), Width: ConfirmChipCell),
-            new CellElement(ConfirmChip(ConfirmNoIcon, CancelCopy), Width: ConfirmChipCell),
-        }, Gap: ConfirmGap);
+            FillColorFn = () => Fade(ConfirmTileColor()), CornerRadius = TileRadius, PaddingX = 0f, PaddingY = 0f,
+        };
     }
 
-    // Wardrobe's icon chip: outline style so the light icon keeps contrast on the dark row.
-    private static ButtonElement ConfirmChip(byte[]? png, Action onClick)
-        => new(() => "", onClick, Style: MenuButtonStyle.Outline, Width: 30f, Icon: () => png);
-
-    private static byte[]? LoadResource(string name)
-    {
-        try
-        {
-            using var s = typeof(Plugin).Assembly.GetManifestResourceStream(name);
-            if (s is null) return null;
-            using var ms = new System.IO.MemoryStream();
-            s.CopyTo(ms);
-            return ms.ToArray();
-        }
-        catch { return null; }
-    }
+    private bool ConfirmHover(bool[] flags, int idx) { SyncRowHover(idx); return flags[idx]; }
 }

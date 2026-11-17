@@ -17,8 +17,9 @@
     <!-- DS binding: consumes IDeepSlumber.ApplySetupAsync + DeepSlumberSetup incl. the tree
          (DeepSlumberAreaBinding.NormalNodes, framework 2.5.0). Requires framework 2.6.4 for
          IPlayerIdentity.CharId (per-character bindings). -->
-    <!-- Loadout copy (2.8.0): ILoadoutSave (IPluginServices.LoadoutSave) — framework 2.10.0. Built against the
-         LOCAL dev pack 2.10.0-loadoutcopy-dev until framework 2.10.0 is released; then flip to 2.10.0. -->
+    <!-- Loadout copy (2.8.0): ILoadoutSave (IPluginServices.LoadoutSave) — framework 2.10.0. -->
+    <!-- House-style window redesign: BubbleElement.FillColorFn, ScrollElement.FixedHeight,
+         theme status colours (fw 2.30) and TextElement.CenterCaps (fw 2.33) → SDK 2.33.0. -->
     <PackageReference Include="Stellar.Abstractions"       Version="2.33.0" />
     <PackageReference Include="Stellar.PluginContracts"    Version="2.33.0" />
     <PackageReference Include="Stellar.Plugin.InteropRefs" Version="2.33.0" />
@@ -38,8 +39,8 @@
     <EmbeddedResource Include="Lang/fil.json" LogicalName="Stellar.LoadoutSwitcher.Lang.fil.json" />
     <EmbeddedResource Include="Lang/ko.json" LogicalName="Stellar.LoadoutSwitcher.Lang.ko.json" />
     <EmbeddedResource Include="Resources/loadoutswitcher-icon.png" LogicalName="Stellar.LoadoutSwitcher.loadoutswitcher-icon.png" />
-    <!-- Copy confirm ✓/✕ chips — the same PNGs as Wardrobe's confirm bar. -->
-    <EmbeddedResource Include="Resources/confirm-yes.png" LogicalName="Stellar.LoadoutSwitcher.confirm-yes.png" />
-    <EmbeddedResource Include="Resources/confirm-no.png" LogicalName="Stellar.LoadoutSwitcher.confirm-no.png" />
+    <!-- Window header glyph, pre-drawn per pixel size (tools/icons/gen-header-icon.py; Plugin.Style.Blocks.cs picks
+         the exact size the 24-unit glyph draws at). Looked up as "Stellar.LoadoutSwitcher.loadoutswitcher-<px>.png". -->
+    <EmbeddedResource Include="Resources/icons/loadoutswitcher-*.png" LogicalName="Stellar.LoadoutSwitcher.%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

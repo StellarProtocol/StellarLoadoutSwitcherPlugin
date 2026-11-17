@@ -117,6 +117,8 @@ public sealed partial class Plugin
         _tick++;
         ConsumeReapplyRequest();
         ConsumeCopyOutcome();   // a finished loadout copy (Plugin.Copy.cs) — main-thread bindings + toasts
+        HelpRepositionTick();   // the help popover's first-open placement (Plugin.Help.cs) — early-out when idle
+        SeasonPollTick();       // the window's cached season, ≤ every 2 s and only while visible (Plugin.Overlay.cs)
         if (_pendingIndex is not null && _tick >= _pendingDeadline) TryApplyPending();
     }
 
